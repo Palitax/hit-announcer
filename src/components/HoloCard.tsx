@@ -8,7 +8,7 @@ interface HoloCardProps {
   card: HitCard;
   onClick?: () => void;
   priority?: boolean;
-  isStage?: boolean; // When in fullscreen spotlight stage
+  isStage?: boolean;
 }
 
 export const HoloCard: React.FC<HoloCardProps> = ({
@@ -21,10 +21,14 @@ export const HoloCard: React.FC<HoloCardProps> = ({
   const [isInteracting, setIsInteracting] = useState(false);
   const [transformStyle, setTransformStyle] = useState<React.CSSProperties>({});
   const [glareStyle, setGlareStyle] = useState<React.CSSProperties>({});
+  const [imgError, setImgError] = useState(false);
 
-  // Pointer Interaction (Mouse or Touch)
+  // Pointer Interaction (Mouse on desktop, or Drag in Stage mode)
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // Ignore touch drag in grid mode so mobile page scrolling is 100% fluid
+    if (e.pointerType === 'touch' && !isStage) return;
     if (!cardRef.current) return;
+
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -35,7 +39,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     const px = (x - width / 2) / (width / 2);
     const py = (y - height / 2) / (height / 2);
 
-    const maxRotation = isStage ? 18 : 12;
+    const maxRotation = isStage ? 18 : 10;
     const rX = -py * maxRotation;
     const rY = px * maxRotation;
 
@@ -49,7 +53,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     });
 
     setGlareStyle({
-      background: `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.25) 35%, transparent 70%)`,
+      background: `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 70%)`,
       opacity: 1,
     });
   }, [isStage]);
@@ -58,44 +62,52 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     setIsInteracting(false);
     setTransformStyle({
       transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
-      transition: 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+      transition: 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
     });
     setGlareStyle({
       opacity: 0,
-      transition: 'opacity 0.5s ease-out',
+      transition: 'opacity 0.4s ease-out',
     });
   }, []);
 
-  // Gyroscope / Device orientation support for mobile devices
+  // Gyroscope / Device orientation support on mobile (Stage Mode only)
   useEffect(() => {
     if (!isStage) return;
 
+    let rafId: number;
+
     const handleOrientation = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
-      const gamma = Math.min(Math.max(e.gamma, -30), 30);
-      const beta = Math.min(Math.max(e.beta - 45, -30), 30);
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const gamma = Math.min(Math.max(e.gamma || 0, -30), 30);
+        const beta = Math.min(Math.max((e.beta || 0) - 45, -30), 30);
 
-      const rY = (gamma / 30) * 16;
-      const rX = -(beta / 30) * 16;
+        const rY = (gamma / 30) * 16;
+        const rX = -(beta / 30) * 16;
 
-      const glareX = 50 + (gamma / 30) * 40;
-      const glareY = 50 + (beta / 30) * 40;
+        const glareX = 50 + (gamma / 30) * 40;
+        const glareY = 50 + (beta / 30) * 40;
 
-      setIsInteracting(true);
-      setTransformStyle({
-        transform: `perspective(1000px) rotateX(${rX.toFixed(2)}deg) rotateY(${rY.toFixed(2)}deg) scale3d(1.03, 1.03, 1.03)`,
-      });
-      setGlareStyle({
-        background: `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 70%)`,
-        opacity: 0.85,
+        setIsInteracting(true);
+        setTransformStyle({
+          transform: `perspective(1000px) rotateX(${rX.toFixed(2)}deg) rotateY(${rY.toFixed(2)}deg) scale3d(1.03, 1.03, 1.03)`,
+        });
+        setGlareStyle({
+          background: `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 70%)`,
+          opacity: 0.85,
+        });
       });
     };
 
     window.addEventListener('deviceorientation', handleOrientation);
-    return () => window.removeEventListener('deviceorientation', handleOrientation);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
   }, [isStage]);
 
-  const cardImg = card?.image || null;
+  const cardImg = imgError || !card?.image ? null : card.image;
 
   return (
     <div className="card-perspective-container group select-none">
@@ -106,46 +118,48 @@ export const HoloCard: React.FC<HoloCardProps> = ({
         onPointerLeave={handlePointerLeave}
         style={transformStyle}
         className={`holo-card cursor-pointer ${!isInteracting ? 'is-idle' : 'is-active'} ${
-          isStage ? 'w-[310px] sm:w-[380px] md:w-[440px]' : 'w-full'
+          isStage ? 'w-[300px] sm:w-[380px] md:w-[440px]' : 'w-full'
         }`}
       >
-        {/* Skeleton / Placeholder while loading */}
-        <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center z-0">
-          <Sparkles className="w-8 h-8 text-amber-400/30 animate-spin-slow" />
+        {/* Skeleton placeholder */}
+        <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center z-0 pointer-events-none">
+          <Sparkles className="w-7 h-7 text-amber-400/30 animate-spin-slow" />
         </div>
 
         {/* Card Artwork */}
         {cardImg ? (
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={cardImg}
               alt={card.name || 'Pokemon Card'}
               loading={priority || isStage ? 'eager' : 'lazy'}
+              decoding="async"
+              onError={() => setImgError(true)}
               className="w-full h-full object-cover select-none pointer-events-none relative z-10"
             />
           </div>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-between p-4 bg-gradient-to-br from-slate-800 to-slate-950 text-center relative z-10">
+          <div className="w-full h-full flex flex-col items-center justify-between p-4 bg-gradient-to-br from-slate-800 to-slate-950 text-center relative z-10 pointer-events-none">
             <span className="text-xs uppercase tracking-wider text-amber-400 font-semibold">{card.hitTierLabel}</span>
             <div className="my-auto">
-              <p className="text-lg font-bold text-white leading-snug">{card.name}</p>
-              <p className="text-sm text-slate-400 mt-1">#{card.localId}</p>
+              <p className="text-base sm:text-lg font-bold text-white leading-snug">{card.name}</p>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">#{card.localId}</p>
             </div>
             <span className="text-[11px] text-slate-500">Hit Card</span>
           </div>
         )}
 
         {/* 1. Continuous Idle Diagonal Sheen (Beam of Light) */}
-        <div className="card-idle-sheen z-20" />
+        <div className="card-idle-sheen z-20 pointer-events-none" />
 
         {/* 2. Prismatic Holographic Diffraction Rainbow Shimmer */}
-        <div className="card-idle-holo z-20" />
+        <div className="card-idle-holo z-20 pointer-events-none" />
 
         {/* 3. Interactive Cursor / Touch Glare */}
-        <div className="card-glare z-20" style={glareStyle} />
+        <div className="card-glare z-20 pointer-events-none" style={glareStyle} />
 
-        {/* Card Border Sheen Highlight */}
+        {/* Card Border Highlight */}
         <div className="absolute inset-0 rounded-[16px] pointer-events-none border border-white/10 group-hover:border-white/25 transition-colors duration-300 z-30" />
       </div>
     </div>

@@ -9,7 +9,7 @@ import { SetCarousel } from '@/components/SetCarousel';
 import { HoloCard } from '@/components/HoloCard';
 import { RarityBadge } from '@/components/RarityBadge';
 import { FullscreenStage } from '@/components/FullscreenStage';
-import { Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, ChevronDown } from 'lucide-react';
 
 function MainApp() {
   const searchParams = useSearchParams();
@@ -26,6 +26,7 @@ function MainApp() {
   const [isLoadingSets, setIsLoadingSets] = useState(true);
   const [isLoadingHits, setIsLoadingHits] = useState(false);
   const [logoBroken, setLogoBroken] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(36);
 
   // Filters & Sorting
   const [activeCategory, setActiveCategory] = useState<HitCategory>('all');
@@ -48,7 +49,6 @@ function MainApp() {
       setIsLoadingSets(false);
 
       if (validSets.length > 0) {
-        // Preferred modern sets per language with guaranteed rich assets
         const preferredIds = ['sv08', 'sv8', 'sv7', 'sv07', 'sv6', 'sv06', 'sv5k', 'sv4a', 'sv035', 's12a'];
         const matched = validSets.find((s) =>
           preferredIds.some((p) => p.toLowerCase() === (s?.id || '').toLowerCase())
@@ -76,6 +76,7 @@ function MainApp() {
     let isMounted = true;
     setIsLoadingHits(true);
     setLogoBroken(false);
+    setVisibleLimit(36);
 
     fetchSetHits(language, activeSetId).then(({ setInfo: info, hits: loadedHits }) => {
       if (!isMounted) return;
@@ -138,12 +139,10 @@ function MainApp() {
 
   const activeSet = sets.find((s) => (s?.id || '').toLowerCase() === (activeSetId || '').toLowerCase()) || sets[0] || null;
 
+  const paginatedHits = displayHits.slice(0, visibleLimit);
+
   return (
     <main className="min-h-screen flex flex-col bg-[#07090e] relative selection:bg-amber-400 selection:text-slate-950">
-      {/* Dynamic Ambient Background Aura */}
-      <div className="fixed -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
-      <div className="fixed top-1/2 -right-40 w-[600px] h-[600px] rounded-full bg-purple-600/5 blur-[140px] pointer-events-none" />
-
       {/* Floating Header HUD */}
       <HeaderHUD
         currentLanguage={language}
@@ -175,33 +174,33 @@ function MainApp() {
       </section>
 
       {/* Active Display Headline & Stats Banner */}
-      <section className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <section className="max-w-7xl mx-auto w-full px-3 sm:px-8 py-4 sm:py-5 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           {activeSet?.logo && !logoBroken && (
-            <div className="relative max-w-[140px] h-12 flex-shrink-0 flex items-center">
+            <div className="relative max-w-[110px] sm:max-w-[140px] h-10 sm:h-12 flex-shrink-0 flex items-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`${activeSet.logo}.png`}
                 alt={activeSet.name || ''}
                 onError={() => setLogoBroken(true)}
-                className="max-h-12 max-w-full object-contain object-left pointer-events-none"
+                className="max-h-10 sm:max-h-12 max-w-full object-contain object-left pointer-events-none"
               />
             </div>
           )}
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <span>{activeSet?.name || setInfo?.name || 'Selected Display'}</span>
-              <span className="text-xs uppercase px-2 py-0.5 rounded-full bg-white/10 text-slate-400 font-mono">
+              <span className="text-[11px] sm:text-xs uppercase px-2 py-0.5 rounded-full bg-white/10 text-slate-400 font-mono">
                 {activeSetId}
               </span>
             </h2>
-            <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+            <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-400 mt-0.5">
               <span className="flex items-center gap-1 text-amber-400 font-medium">
                 <Sparkles className="w-3.5 h-3.5" />
                 {displayHits.length} Hits Showing
               </span>
               <span>•</span>
-              <span>Total Display Set: {setInfo?.cardCount?.total || activeSet?.cardCount?.total || '—'} cards</span>
+              <span>Total Display: {setInfo?.cardCount?.total || activeSet?.cardCount?.total || '—'}</span>
             </div>
           </div>
         </div>
@@ -213,9 +212,9 @@ function MainApp() {
       </section>
 
       {/* Cards Grid Section */}
-      <section className="max-w-7xl mx-auto w-full px-4 sm:px-8 pb-16 flex-1">
+      <section className="max-w-7xl mx-auto w-full px-3 sm:px-8 pb-16 flex-1">
         {isLoadingHits ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 pt-2">
             {Array.from({ length: 12 }).map((_, i) => (
               <div
                 key={i}
@@ -224,39 +223,54 @@ function MainApp() {
             ))}
           </div>
         ) : displayHits.length === 0 ? (
-          <div className="w-full py-24 flex flex-col items-center justify-center text-center text-slate-500">
+          <div className="w-full py-20 flex flex-col items-center justify-center text-center text-slate-500">
             <ImageIcon className="w-12 h-12 text-slate-700 mb-3" />
             <p className="text-base font-semibold text-slate-400">No hits found for this category</p>
             <p className="text-xs text-slate-600 mt-1">Try selecting &ldquo;All Hits&rdquo; or another display from the carousel above.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 pt-2">
-            {displayHits.map((card, idx) => (
-              <div key={card.id || idx} className="flex flex-col gap-2">
-                {/* 3D Holographic Card with Idle Animated Sweep */}
-                <HoloCard
-                  card={card}
-                  onClick={() => setFullscreenIndex(idx)}
-                  priority={idx < 6}
-                />
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 pt-2">
+              {paginatedHits.map((card, idx) => (
+                <div key={card.id || idx} className="card-grid-item flex flex-col gap-1.5 sm:gap-2">
+                  {/* 3D Holographic Card with Idle Animated Sweep */}
+                  <HoloCard
+                    card={card}
+                    onClick={() => setFullscreenIndex(idx)}
+                    priority={idx < 4}
+                  />
 
-                {/* Minimalist Card Metadata */}
-                <div className="flex items-center justify-between gap-1 px-1">
-                  <span className="text-xs font-semibold text-slate-200 truncate max-w-[120px]">
-                    {card.name}
-                  </span>
-                  <span className="text-[11px] font-mono text-slate-500">
-                    #{card.localId}
-                  </span>
-                </div>
+                  {/* Minimalist Card Metadata */}
+                  <div className="flex items-center justify-between gap-1 px-1">
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-200 truncate max-w-[110px] sm:max-w-[130px]">
+                      {card.name}
+                    </span>
+                    <span className="text-[10px] sm:text-[11px] font-mono text-slate-500">
+                      #{card.localId}
+                    </span>
+                  </div>
 
-                {/* Rarity Pill */}
-                <div className="px-1">
-                  <RarityBadge card={card} className="text-[10px] py-0 px-2" />
+                  {/* Rarity Pill */}
+                  <div className="px-1">
+                    <RarityBadge card={card} className="text-[9px] sm:text-[10px] py-0 px-2" />
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Load More for very large sets */}
+            {visibleLimit < displayHits.length && (
+              <div className="w-full flex justify-center pt-8 pb-4">
+                <button
+                  onClick={() => setVisibleLimit((prev) => prev + 36)}
+                  className="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-slate-300 hover:text-white text-xs font-medium transition-all shadow-lg active:scale-95"
+                >
+                  <span>Show More Hits ({displayHits.length - visibleLimit} remaining)</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </section>
 
