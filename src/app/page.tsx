@@ -9,6 +9,7 @@ import { SetCarousel } from '@/components/SetCarousel';
 import { HoloCard } from '@/components/HoloCard';
 import { RarityBadge } from '@/components/RarityBadge';
 import { FullscreenStage } from '@/components/FullscreenStage';
+import { CardSearchModal } from '@/components/CardSearchModal';
 import { Sparkles, Image as ImageIcon, ChevronDown } from 'lucide-react';
 
 function MainApp() {
@@ -28,6 +29,10 @@ function MainApp() {
   const [logoBroken, setLogoBroken] = useState(false);
   const [visibleLimit, setVisibleLimit] = useState(36);
 
+  // Search Modal state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+
   // Filters & Sorting
   const [activeCategory, setActiveCategory] = useState<HitCategory>('all');
   const [activeSort, setActiveSort] = useState<SortOption>('hits');
@@ -36,6 +41,22 @@ function MainApp() {
   const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(
     initialStage !== null ? parseInt(initialStage, 10) || 0 : null
   );
+
+  // Global hotkey for Search (Cmd+K / Ctrl+K / /)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
 
   // 1. Load sets when language changes
   useEffect(() => {
@@ -81,17 +102,55 @@ function MainApp() {
     fetchSetHits(language, activeSetId).then(({ setInfo: info, hits: loadedHits }) => {
       if (!isMounted) return;
       setSetInfo(info);
-      setHits(Array.isArray(loadedHits) ? loadedHits : []);
+      const safeHits = Array.isArray(loadedHits) ? loadedHits : [];
+      setHits(safeHits);
       setIsLoadingHits(false);
+
+      if (pendingCardId) {
+        const foundIdx = safeHits.findIndex(
+          (c) =>
+            c?.id?.toLowerCase() === pendingCardId.toLowerCase() ||
+            c?.localId?.toLowerCase() === pendingCardId.toLowerCase()
+        );
+        if (foundIdx !== -1) {
+          setFullscreenIndex(foundIdx);
+        } else if (safeHits.length > 0) {
+          setFullscreenIndex(0);
+        }
+        setPendingCardId(null);
+      }
     }).catch(() => {
       if (!isMounted) return;
       setIsLoadingHits(false);
+      setPendingCardId(null);
     });
 
     return () => {
       isMounted = false;
     };
-  }, [language, activeSetId]);
+  }, [language, activeSetId, pendingCardId]);
+
+  // Handle Card Selection from Search Modal
+  const handleSelectCardFromSearch = (targetSetId: string, cardId: string) => {
+    setActiveCategory('all');
+    const currentSetMatches = (activeSetId || '').toLowerCase() === (targetSetId || '').toLowerCase();
+
+    if (currentSetMatches) {
+      const foundIdx = displayHits.findIndex(
+        (c) =>
+          c?.id?.toLowerCase() === cardId.toLowerCase() ||
+          c?.localId?.toLowerCase() === cardId.toLowerCase()
+      );
+      if (foundIdx !== -1) {
+        setFullscreenIndex(foundIdx);
+      } else if (displayHits.length > 0) {
+        setFullscreenIndex(0);
+      }
+    } else {
+      setPendingCardId(cardId);
+      setActiveSetId(targetSetId);
+    }
+  };
 
   // 3. Filter and sort hits
   const displayHits = useMemo(() => {
@@ -157,8 +216,10 @@ function MainApp() {
         onLaunchStage={() => {
           if (displayHits.length > 0) setFullscreenIndex(0);
         }}
+        onOpenSearch={() => setIsSearchOpen(true)}
         hitsCount={displayHits.length}
       />
+
 
       {/* Booster Display Carousel (Quick Swipe / Scroll) */}
       <section className="w-full border-b border-white/5 bg-slate-950/40 backdrop-blur-md">
@@ -285,6 +346,19 @@ function MainApp() {
           language={language}
         />
       )}
+
+      {/* Global Pokémon Search Modal */}
+      <CardSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        language={language}
+        onSelectLanguage={(newLang) => {
+          setLanguage(newLang);
+          setFullscreenIndex(null);
+        }}
+        sets={sets}
+        onSelectCard={handleSelectCardFromSearch}
+      />
     </main>
   );
 }

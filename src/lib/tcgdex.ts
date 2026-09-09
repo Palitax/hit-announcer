@@ -5,6 +5,7 @@ const API_BASE = 'https://api.tcgdex.net/v2';
 const setsCache = new Map<string, PokemonSetSummary[]>();
 const hitsCache = new Map<string, { setInfo: SetDetailResponse | null; hits: HitCard[] }>();
 const cardDetailsCache = new Map<string, any>();
+const searchCache = new Map<string, SearchResultCard[]>();
 
 export async function fetchSets(lang: Language): Promise<PokemonSetSummary[]> {
   const cacheKey = `sets-${lang}`;
@@ -66,7 +67,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
       const rarity = card.rarity || '';
       
       const weightEntry = RARITY_WEIGHTS[rarity];
-      const hasHitKeyword = /\b(ex|VMAX|VSTAR|SAR|SIR|AR|UR|CHR|CSR)\b/i.test(card.name);
+      const hasHitKeyword = /\b(V|ex|VMAX|VSTAR|SAR|SIR|AR|UR|CHR|CSR|GX|EX|LV\.X|Prime|Break|ACE SPEC)\b/i.test(card.name);
 
       if (isSecret || !!weightEntry || hasHitKeyword) {
         let hitTier: HitCard['hitTier'] = 'ultra';
@@ -125,8 +126,27 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
       }
     }
 
+    // Fallback: If no hits were matched via rules (e.g. vintage sets with sparse rarity metadata), include all cards so the display is never blank
+    if (hits.length === 0 && (setData.cards || []).length > 0) {
+      for (const card of setData.cards) {
+        let highResImage = card.image;
+        if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
+          highResImage = `${highResImage}/high.webp`;
+        }
+        hits.push({
+          ...card,
+          image: highResImage,
+          hitTier: 'ultra',
+          hitTierLabel: card.rarity || 'Rare',
+          hitTierBadgeColor: 'from-blue-600 to-indigo-700 text-white',
+          isSecret: false,
+          score: 50,
+        });
+      }
+    }
+
     // Default sorting: Biggest Hits First (highest score first)
-    hits.sort((a, b) => b.score - a.score || parseInt(b.localId) - parseInt(a.localId));
+    hits.sort((a, b) => (b.score || 0) - (a.score || 0) || (parseInt(b.localId, 10) || 0) - (parseInt(a.localId, 10) || 0));
 
     const result = { setInfo: setData, hits };
     hitsCache.set(cacheKey, result);
@@ -152,3 +172,77 @@ export async function fetchCardDetail(lang: Language, cardId: string) {
     return null;
   }
 }
+
+export interface SearchResultCard {
+  id: string;
+  localId: string;
+  name: string;
+  image?: string;
+  setId: string;
+  setName: string;
+  setLogo?: string;
+}
+
+export async function searchCardsByName(
+  lang: Language,
+  query: string,
+  sets: PokemonSetSummary[]
+): Promise<SearchResultCard[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const cacheKey = `search-${lang}-${trimmed.toLowerCase()}`;
+  if (searchCache.has(cacheKey)) {
+    return searchCache.get(cacheKey)!;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/${lang}/cards?name=${encodeURIComponent(trimmed)}`);
+    if (!res.ok) return [];
+    const data: PokemonCardRaw[] = await res.json();
+
+    const setMap = new Map<string, PokemonSetSummary>();
+    (sets || []).forEach((s) => {
+      if (!s?.id) return;
+      const lower = s.id.toLowerCase();
+      setMap.set(lower, s);
+      const norm = lower.replace(/0(?=\d)/g, '');
+      if (norm !== lower && !setMap.has(norm)) {
+        setMap.set(norm, s);
+      }
+    });
+
+    const results: SearchResultCard[] = data.map((card) => {
+      // Extract setId from card id (e.g. 'swsh10.5-049' -> 'swsh10.5', 'sv08-238' -> 'sv08')
+      const lastDash = card.id.lastIndexOf('-');
+      const rawSetId = lastDash !== -1 ? card.id.substring(0, lastDash) : card.id;
+      const rawLower = rawSetId.toLowerCase();
+      const rawNorm = rawLower.replace(/0(?=\d)/g, '');
+
+      const foundSet = setMap.get(rawLower) || setMap.get(rawNorm);
+      const matchedSetId = foundSet?.id || rawSetId;
+
+      let highResImage = card.image;
+      if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
+        highResImage = `${highResImage}/high.webp`;
+      }
+
+      return {
+        id: card.id,
+        localId: card.localId,
+        name: card.name,
+        image: highResImage,
+        setId: matchedSetId,
+        setName: foundSet?.name || matchedSetId,
+        setLogo: foundSet?.logo,
+      };
+    });
+
+    searchCache.set(cacheKey, results);
+    return results;
+  } catch (err) {
+    console.error(`Error searching cards for "${trimmed}" in ${lang}:`, err);
+    return [];
+  }
+}
+
