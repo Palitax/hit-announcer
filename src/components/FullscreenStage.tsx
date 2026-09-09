@@ -30,14 +30,16 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
   const [detail, setDetail] = useState<any>(null);
   const touchStartX = useRef<number | null>(null);
 
+  const cardId = currentCard?.id;
+
   // Fetch card detail for extra metadata (illustrator, hp, types)
   useEffect(() => {
-    if (!currentCard) return;
+    if (!cardId) return;
     setDetail(null);
-    fetchCardDetail(language, currentCard.id).then((d) => {
+    fetchCardDetail(language, cardId).then((d) => {
       if (d) setDetail(d);
     });
-  }, [currentCard, language]);
+  }, [cardId, language]);
 
   const goToNext = useCallback(() => {
     if (currentIndex < cards.length - 1) {
@@ -88,19 +90,28 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
   };
 
   const triggerConfetti = () => {
-    confetti({
-      particleCount: 80,
-      spread: 90,
-      origin: { y: 0.65 },
-      colors: ['#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ffffff'],
-    });
+    try {
+      confetti({
+        particleCount: 80,
+        spread: 90,
+        origin: { y: 0.65 },
+        colors: ['#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ffffff'],
+      });
+    } catch {
+      // ignore
+    }
   };
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    if (typeof document === 'undefined') return;
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      }
+    } catch {
+      // Fullscreen not supported on iOS Safari
     }
   };
 

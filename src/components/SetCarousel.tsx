@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import Image from 'next/image';
 import { PokemonSetSummary } from '@/lib/types';
 import { ChevronLeft, ChevronRight, Layers, Search, Sparkles } from 'lucide-react';
 
@@ -13,18 +12,22 @@ interface SetCarouselProps {
 }
 
 export const SetCarousel: React.FC<SetCarouselProps> = ({
-  sets,
+  sets = [],
   activeSetId,
   onSelectSet,
   isLoading = false,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [brokenLogos, setBrokenLogos] = useState<Record<string, boolean>>({});
 
-  const filteredSets = sets.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSets = (sets || []).filter((s) => {
+    if (!s) return false;
+    const name = (s.name || '').toLowerCase();
+    const id = (s.id || '').toLowerCase();
+    const q = searchQuery.toLowerCase();
+    return name.includes(q) || id.includes(q);
+  });
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -86,8 +89,8 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
             </div>
           ) : (
             filteredSets.map((s) => {
-              const isActive = s.id === activeSetId;
-              const hasLogo = !!s.logo;
+              const isActive = (s?.id || '').toLowerCase() === (activeSetId || '').toLowerCase();
+              const hasLogo = !!s?.logo && !brokenLogos[s.id];
 
               return (
                 <button
@@ -110,18 +113,16 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
                   {/* Logo or Title */}
                   <div className="h-10 relative flex items-center justify-start mb-2">
                     {hasLogo ? (
-                      <div className="relative w-full h-9">
-                        <Image
-                          src={`${s.logo}.png`}
-                          alt={s.name}
-                          fill
-                          className="object-contain object-left"
-                          unoptimized
-                        />
-                      </div>
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={`${s.logo}.png`}
+                        alt={s.name || ''}
+                        onError={() => setBrokenLogos((prev) => ({ ...prev, [s.id]: true }))}
+                        className="max-h-9 max-w-full object-contain object-left pointer-events-none"
+                      />
                     ) : (
                       <span className="text-xs font-semibold text-slate-300 line-clamp-2">
-                        {s.name}
+                        {s?.name || s?.id}
                       </span>
                     )}
                   </div>

@@ -21,8 +21,6 @@ export const HoloCard: React.FC<HoloCardProps> = ({
   const [isInteracting, setIsInteracting] = useState(false);
   const [transformStyle, setTransformStyle] = useState<React.CSSProperties>({});
   const [glareStyle, setGlareStyle] = useState<React.CSSProperties>({});
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   // Pointer Interaction (Mouse or Touch)
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -97,7 +95,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, [isStage]);
 
-  const cardImg = imageError || !card.image ? null : card.image;
+  const cardImg = card?.image || null;
 
   return (
     <div className="card-perspective-container group select-none">
@@ -112,30 +110,19 @@ export const HoloCard: React.FC<HoloCardProps> = ({
         }`}
       >
         {/* Skeleton / Placeholder while loading */}
-        {!imageLoaded && !imageError && (
-          <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center z-0">
-            <Sparkles className="w-8 h-8 text-amber-400/40 animate-spin-slow" />
-          </div>
-        )}
+        <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center z-0">
+          <Sparkles className="w-8 h-8 text-amber-400/30 animate-spin-slow" />
+        </div>
 
         {/* Card Artwork */}
         {cardImg ? (
           <div className="relative w-full h-full flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              ref={(el) => {
-                if (el && el.complete && el.naturalWidth > 0 && !imageLoaded) {
-                  setImageLoaded(true);
-                }
-              }}
               src={cardImg}
-              alt={card.name}
+              alt={card.name || 'Pokemon Card'}
               loading={priority || isStage ? 'eager' : 'lazy'}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-              className={`w-full h-full object-cover select-none pointer-events-none transition-opacity duration-300 relative z-10 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
+              className="w-full h-full object-cover select-none pointer-events-none relative z-10"
             />
           </div>
         ) : (

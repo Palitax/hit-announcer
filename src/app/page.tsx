@@ -10,7 +10,6 @@ import { HoloCard } from '@/components/HoloCard';
 import { RarityBadge } from '@/components/RarityBadge';
 import { FullscreenStage } from '@/components/FullscreenStage';
 import { Sparkles, Image as ImageIcon } from 'lucide-react';
-import Image from 'next/image';
 
 function MainApp() {
   const searchParams = useSearchParams();
@@ -20,12 +19,13 @@ function MainApp() {
 
   const [language, setLanguage] = useState<Language>(initialLang);
   const [sets, setSets] = useState<PokemonSetSummary[]>([]);
-  const [activeSetId, setActiveSetId] = useState<string>(initialSet || '');
+  const [activeSetId, setActiveSetId] = useState<string>(initialSet || 'sv08');
   const [setInfo, setSetInfo] = useState<SetDetailResponse | null>(null);
   const [hits, setHits] = useState<HitCard[]>([]);
 
   const [isLoadingSets, setIsLoadingSets] = useState(true);
   const [isLoadingHits, setIsLoadingHits] = useState(false);
+  const [logoBroken, setLogoBroken] = useState(false);
 
   // Filters & Sorting
   const [activeCategory, setActiveCategory] = useState<HitCategory>('all');
@@ -43,19 +43,25 @@ function MainApp() {
 
     fetchSets(language).then((loadedSets) => {
       if (!isMounted) return;
-      setSets(loadedSets);
+      const validSets = Array.isArray(loadedSets) ? loadedSets : [];
+      setSets(validSets);
       setIsLoadingSets(false);
 
-      if (loadedSets.length > 0) {
+      if (validSets.length > 0) {
         // Preferred modern sets per language with guaranteed rich assets
         const preferredIds = ['sv08', 'sv8', 'sv7', 'sv07', 'sv6', 'sv06', 'sv5k', 'sv4a', 'sv035', 's12a'];
-        const matched = loadedSets.find((s) =>
-          preferredIds.some((p) => p.toLowerCase() === s.id.toLowerCase())
+        const matched = validSets.find((s) =>
+          preferredIds.some((p) => p.toLowerCase() === (s?.id || '').toLowerCase())
         );
 
-        const target = matched || loadedSets[0];
-        setActiveSetId(target.id);
+        const target = matched || validSets[0];
+        if (target && target.id) {
+          setActiveSetId(target.id);
+        }
       }
+    }).catch(() => {
+      if (!isMounted) return;
+      setIsLoadingSets(false);
     });
 
     return () => {
@@ -69,11 +75,15 @@ function MainApp() {
 
     let isMounted = true;
     setIsLoadingHits(true);
+    setLogoBroken(false);
 
     fetchSetHits(language, activeSetId).then(({ setInfo: info, hits: loadedHits }) => {
       if (!isMounted) return;
       setSetInfo(info);
-      setHits(loadedHits);
+      setHits(Array.isArray(loadedHits) ? loadedHits : []);
+      setIsLoadingHits(false);
+    }).catch(() => {
+      if (!isMounted) return;
       setIsLoadingHits(false);
     });
 
@@ -84,11 +94,12 @@ function MainApp() {
 
   // 3. Filter and sort hits
   const displayHits = useMemo(() => {
-    let result = [...hits];
+    let result = [...(hits || [])];
 
     // Filter by rarity tier
     if (activeCategory !== 'all') {
       result = result.filter((card) => {
+        if (!card) return false;
         if (activeCategory === 'sir-sar') return card.hitTier === 'sar' || card.hitTier === 'sir';
         if (activeCategory === 'ir-ar') return card.hitTier === 'ir' || card.hitTier === 'ar';
         if (activeCategory === 'gold') return card.hitTier === 'gold';
@@ -100,20 +111,24 @@ function MainApp() {
     // Sort
     result.sort((a, b) => {
       if (activeSort === 'hits') {
-        return b.score - a.score || parseInt(b.localId) - parseInt(a.localId);
+        const scoreDiff = (b?.score || 0) - (a?.score || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        const numA = parseInt(a?.localId || '0', 10) || 0;
+        const numB = parseInt(b?.localId || '0', 10) || 0;
+        return numB - numA;
       }
       if (activeSort === 'number-asc') {
-        const numA = parseInt(a.localId) || 0;
-        const numB = parseInt(b.localId) || 0;
+        const numA = parseInt(a?.localId || '0', 10) || 0;
+        const numB = parseInt(b?.localId || '0', 10) || 0;
         return numA - numB;
       }
       if (activeSort === 'number-desc') {
-        const numA = parseInt(a.localId) || 0;
-        const numB = parseInt(b.localId) || 0;
+        const numA = parseInt(a?.localId || '0', 10) || 0;
+        const numB = parseInt(b?.localId || '0', 10) || 0;
         return numB - numA;
       }
       if (activeSort === 'name') {
-        return a.name.localeCompare(b.name);
+        return (a?.name || '').localeCompare(b?.name || '');
       }
       return 0;
     });
@@ -121,7 +136,7 @@ function MainApp() {
     return result;
   }, [hits, activeCategory, activeSort]);
 
-  const activeSet = sets.find((s) => s.id.toLowerCase() === activeSetId.toLowerCase()) || sets[0];
+  const activeSet = sets.find((s) => (s?.id || '').toLowerCase() === (activeSetId || '').toLowerCase()) || sets[0] || null;
 
   return (
     <main className="min-h-screen flex flex-col bg-[#07090e] relative selection:bg-amber-400 selection:text-slate-950">
@@ -162,14 +177,14 @@ function MainApp() {
       {/* Active Display Headline & Stats Banner */}
       <section className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          {activeSet?.logo && (
-            <div className="relative w-28 sm:w-36 h-12 flex-shrink-0">
-              <Image
+          {activeSet?.logo && !logoBroken && (
+            <div className="relative max-w-[140px] h-12 flex-shrink-0 flex items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={`${activeSet.logo}.png`}
-                alt={activeSet.name}
-                fill
-                className="object-contain object-left"
-                unoptimized
+                alt={activeSet.name || ''}
+                onError={() => setLogoBroken(true)}
+                className="max-h-12 max-w-full object-contain object-left pointer-events-none"
               />
             </div>
           )}
@@ -217,7 +232,7 @@ function MainApp() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6 pt-2">
             {displayHits.map((card, idx) => (
-              <div key={card.id} className="flex flex-col gap-2">
+              <div key={card.id || idx} className="flex flex-col gap-2">
                 {/* 3D Holographic Card with Idle Animated Sweep */}
                 <HoloCard
                   card={card}
