@@ -9,6 +9,7 @@ interface HoloCardProps {
   onClick?: () => void;
   priority?: boolean;
   isStage?: boolean;
+  isFullscreen?: boolean;
 }
 
 export const HoloCard: React.FC<HoloCardProps> = ({
@@ -16,6 +17,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
   onClick,
   priority = false,
   isStage = false,
+  isFullscreen = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardElementRef = useRef<HTMLDivElement>(null);
@@ -37,7 +39,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     const px = (x - width / 2) / (width / 2);
     const py = (y - height / 2) / (height / 2);
 
-    const maxRotation = isStage ? 16 : 10;
+    const maxRotation = isStage ? 18 : 10;
     const rX = -py * maxRotation;
     const rY = px * maxRotation;
 
@@ -47,7 +49,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     const el = cardElementRef.current;
     el.style.setProperty('--rx', `${rX.toFixed(2)}deg`);
     el.style.setProperty('--ry', `${rY.toFixed(2)}deg`);
-    el.style.setProperty('--scale', isStage ? '1.03' : '1.025');
+    el.style.setProperty('--scale', isStage ? '1.02' : '1.025');
     el.style.setProperty('--glare-x', `${glareX.toFixed(1)}%`);
     el.style.setProperty('--glare-y', `${glareY.toFixed(1)}%`);
     el.style.setProperty('--glare-opacity', '1');
@@ -137,8 +139,12 @@ export const HoloCard: React.FC<HoloCardProps> = ({
         }
       }}
       onPointerLeave={handlePointerLeave}
-      className={`card-perspective-container select-none ${
-        isStage ? 'w-[300px] sm:w-[380px] md:w-[440px] touch-none' : 'w-full'
+      className={`card-perspective-container select-none overflow-visible ${
+        isStage
+          ? isFullscreen
+            ? 'w-auto h-[78vh] sm:h-[82vh] max-h-[850px] max-w-[92vw] aspect-[2.5/3.5] touch-none flex-shrink-0'
+            : 'w-auto h-[50vh] sm:h-[54vh] md:h-[58vh] max-h-[580px] max-w-[85vw] aspect-[2.5/3.5] touch-none flex-shrink-0'
+          : 'w-full aspect-[2.5/3.5]'
       }`}
     >
       <div

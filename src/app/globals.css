@@ -23,6 +23,7 @@ body {
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   position: relative;
+  overflow: visible;
   cursor: pointer;
 }
 
