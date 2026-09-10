@@ -17,19 +17,17 @@ export const HoloCard: React.FC<HoloCardProps> = ({
   priority = false,
   isStage = false,
 }) => {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [isInteracting, setIsInteracting] = useState(false);
-  const [transformStyle, setTransformStyle] = useState<React.CSSProperties>({});
-  const [glareStyle, setGlareStyle] = useState<React.CSSProperties>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardElementRef = useRef<HTMLDivElement>(null);
   const [imgError, setImgError] = useState(false);
+  const isHovered = useRef(false);
 
-  // Pointer Interaction (Mouse on desktop, or Drag in Stage mode)
+  // Pointer Interaction (Static flat outer container handles events, avoiding cursor flicker)
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    // Ignore touch drag in grid mode so mobile page scrolling is 100% fluid
     if (e.pointerType === 'touch' && !isStage) return;
-    if (!cardRef.current) return;
+    if (!containerRef.current || !cardElementRef.current) return;
 
-    const rect = cardRef.current.getBoundingClientRect();
+    const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
@@ -39,35 +37,31 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     const px = (x - width / 2) / (width / 2);
     const py = (y - height / 2) / (height / 2);
 
-    const maxRotation = isStage ? 18 : 10;
+    const maxRotation = isStage ? 16 : 10;
     const rX = -py * maxRotation;
     const rY = px * maxRotation;
 
     const glareX = (x / width) * 100;
     const glareY = (y / height) * 100;
 
-    setIsInteracting(true);
-    setTransformStyle({
-      transform: `perspective(1000px) rotateX(${rX.toFixed(2)}deg) rotateY(${rY.toFixed(2)}deg) scale3d(${isStage ? 1.04 : 1.02}, ${isStage ? 1.04 : 1.02}, ${isStage ? 1.04 : 1.02})`,
-      transition: 'transform 0.08s ease-out',
-    });
-
-    setGlareStyle({
-      background: `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 70%)`,
-      opacity: 1,
-    });
+    const el = cardElementRef.current;
+    el.style.setProperty('--rx', `${rX.toFixed(2)}deg`);
+    el.style.setProperty('--ry', `${rY.toFixed(2)}deg`);
+    el.style.setProperty('--scale', isStage ? '1.03' : '1.025');
+    el.style.setProperty('--glare-x', `${glareX.toFixed(1)}%`);
+    el.style.setProperty('--glare-y', `${glareY.toFixed(1)}%`);
+    el.style.setProperty('--glare-opacity', '1');
+    isHovered.current = true;
   }, [isStage]);
 
   const handlePointerLeave = useCallback(() => {
-    setIsInteracting(false);
-    setTransformStyle({
-      transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
-      transition: 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
-    });
-    setGlareStyle({
-      opacity: 0,
-      transition: 'opacity 0.4s ease-out',
-    });
+    isHovered.current = false;
+    if (!cardElementRef.current) return;
+    const el = cardElementRef.current;
+    el.style.setProperty('--rx', '0deg');
+    el.style.setProperty('--ry', '0deg');
+    el.style.setProperty('--scale', '1');
+    el.style.setProperty('--glare-opacity', '0');
   }, []);
 
   // Gyroscope / Device orientation support on mobile (Stage Mode only)
@@ -77,26 +71,26 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     let rafId: number;
 
     const handleOrientation = (e: DeviceOrientationEvent) => {
-      if (e.gamma === null || e.beta === null) return;
+      if (e.gamma === null || e.beta === null || !cardElementRef.current || isHovered.current) return;
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const gamma = Math.min(Math.max(e.gamma || 0, -30), 30);
         const beta = Math.min(Math.max((e.beta || 0) - 45, -30), 30);
 
-        const rY = (gamma / 30) * 16;
-        const rX = -(beta / 30) * 16;
+        const rY = (gamma / 30) * 14;
+        const rX = -(beta / 30) * 14;
 
         const glareX = 50 + (gamma / 30) * 40;
         const glareY = 50 + (beta / 30) * 40;
 
-        setIsInteracting(true);
-        setTransformStyle({
-          transform: `perspective(1000px) rotateX(${rX.toFixed(2)}deg) rotateY(${rY.toFixed(2)}deg) scale3d(1.03, 1.03, 1.03)`,
-        });
-        setGlareStyle({
-          background: `radial-gradient(circle at ${glareX.toFixed(1)}% ${glareY.toFixed(1)}%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 40%, transparent 70%)`,
-          opacity: 0.85,
-        });
+        const el = cardElementRef.current;
+        if (!el) return;
+        el.style.setProperty('--rx', `${rX.toFixed(2)}deg`);
+        el.style.setProperty('--ry', `${rY.toFixed(2)}deg`);
+        el.style.setProperty('--scale', '1.02');
+        el.style.setProperty('--glare-x', `${glareX.toFixed(1)}%`);
+        el.style.setProperty('--glare-y', `${glareY.toFixed(1)}%`);
+        el.style.setProperty('--glare-opacity', '0.8');
       });
     };
 
@@ -110,16 +104,18 @@ export const HoloCard: React.FC<HoloCardProps> = ({
   const cardImg = imgError || !card?.image ? null : card.image;
 
   return (
-    <div className="card-perspective-container group select-none">
+    <div
+      ref={containerRef}
+      onClick={onClick}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className={`card-perspective-container select-none ${
+        isStage ? 'w-[300px] sm:w-[380px] md:w-[440px]' : 'w-full'
+      }`}
+    >
       <div
-        ref={cardRef}
-        onClick={onClick}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        style={transformStyle}
-        className={`holo-card cursor-pointer ${!isInteracting ? 'is-idle' : 'is-active'} ${
-          isStage ? 'w-[300px] sm:w-[380px] md:w-[440px]' : 'w-full'
-        }`}
+        ref={cardElementRef}
+        className="holo-card w-full h-full"
       >
         {/* Skeleton placeholder */}
         <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center z-0 pointer-events-none">
@@ -157,7 +153,7 @@ export const HoloCard: React.FC<HoloCardProps> = ({
         <div className="card-idle-holo z-20 pointer-events-none" />
 
         {/* 3. Interactive Cursor / Touch Glare */}
-        <div className="card-glare z-20 pointer-events-none" style={glareStyle} />
+        <div className="card-glare z-20 pointer-events-none" />
 
         {/* Card Border Highlight */}
         <div className="absolute inset-0 rounded-[16px] pointer-events-none border border-white/10 group-hover:border-white/25 transition-colors duration-300 z-30" />
@@ -165,3 +161,4 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     </div>
   );
 };
+

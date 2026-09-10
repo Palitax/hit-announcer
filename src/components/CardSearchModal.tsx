@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Language, PokemonSetSummary } from '@/lib/types';
 import { searchCardsByName, SearchResultCard } from '@/lib/tcgdex';
 import { LANGUAGES } from '@/lib/constants';
@@ -13,6 +13,7 @@ interface CardSearchModalProps {
   onSelectLanguage?: (lang: Language) => void;
   sets: PokemonSetSummary[];
   onSelectCard: (setId: string, cardId: string) => void;
+  initialQuery?: string;
 }
 
 const POPULAR_SEARCHES: Record<Language, string[]> = {
@@ -30,45 +31,76 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
   onSelectLanguage,
   sets,
   onSelectCard,
+  initialQuery = '',
 }) => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SearchResultCard[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Focus input on open
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    } else {
-      setQuery('');
-      setResults([]);
-    }
-  }, [isOpen]);
-
-  // Debounced search
-  useEffect(() => {
-    if (!query.trim()) {
+  // Execute Search immediately
+  const executeSearch = useCallback((searchTerm: string) => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
       setResults([]);
       setIsSearching(false);
       return;
     }
 
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      searchCardsByName(language, query, sets)
-        .then((cards) => {
-          setResults(cards);
-          setIsSearching(false);
-        })
-        .catch(() => {
-          setResults([]);
-          setIsSearching(false);
-        });
-    }, 250);
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
 
-    return () => clearTimeout(timer);
-  }, [query, language, sets]);
+    setIsSearching(true);
+    searchCardsByName(language, trimmed, sets)
+      .then((cards) => {
+        setResults(cards || []);
+        setIsSearching(false);
+      })
+      .catch(() => {
+        setResults([]);
+        setIsSearching(false);
+      });
+  }, [language, sets]);
+
+  // Focus input & initialize query on open
+  useEffect(() => {
+    if (isOpen) {
+      if (initialQuery) {
+        setQuery(initialQuery);
+        executeSearch(initialQuery);
+      }
+      setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
+      setQuery('');
+      setResults([]);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    }
+  }, [isOpen, initialQuery, executeSearch]);
+
+  // Debounced typing search
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    if (!val.trim()) {
+      setResults([]);
+      setIsSearching(false);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      return;
+    }
+
+    setIsSearching(true);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      executeSearch(val);
+    }, 280);
+  };
+
+  // Explicit Form Submit (Enter key or Search button)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeSearch(query);
+  };
 
   // Global keydown (Escape to close)
   useEffect(() => {
@@ -93,37 +125,58 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
 
       {/* Modal Content */}
       <div className="relative w-full max-w-2xl bg-slate-950 border border-white/15 rounded-3xl shadow-2xl flex flex-col max-h-[82vh] overflow-hidden z-10 animate-in zoom-in-95 duration-200">
-        {/* Search Bar Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 flex items-center gap-3 bg-slate-950/80">
-          <div className="p-2 rounded-xl bg-amber-400/10 text-amber-400">
+        {/* Search Bar Header with Form */}
+        <form
+          onSubmit={handleSubmit}
+          className="p-3 sm:p-4 border-b border-white/10 flex items-center gap-2 sm:gap-3 bg-slate-950/90"
+        >
+          <div className="p-2 rounded-xl bg-amber-400/10 text-amber-400 flex-shrink-0">
             <Search className="w-5 h-5" />
           </div>
           <input
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={`Search Pokémon in ${currentLangObj.name} (e.g. ${popularChips.slice(0, 2).join(', ')})...`}
-            className="flex-1 bg-transparent text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none"
+            onChange={(e) => handleQueryChange(e.target.value)}
+            placeholder={`Search Pokémon (e.g. ${popularChips.slice(0, 2).join(', ')})...`}
+            className="flex-1 bg-transparent text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none min-w-0"
           />
+
           {isSearching && (
             <Loader2 className="w-5 h-5 text-amber-400 animate-spin flex-shrink-0" />
           )}
+
           {query && !isSearching && (
             <button
-              onClick={() => setQuery('')}
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setResults([]);
+                inputRef.current?.focus();
+              }}
               className="p-1 rounded-full text-slate-400 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
           )}
+
+          {/* Search / Enter Button */}
           <button
+            type="submit"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold shadow-md shadow-amber-400/20 active:scale-95 transition-all flex-shrink-0"
+          >
+            <span>Search</span>
+            <span className="hidden sm:inline text-[10px] opacity-75 font-mono">↵</span>
+          </button>
+
+          <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </form>
 
         {/* Language Tabs Strip */}
         {onSelectLanguage && (

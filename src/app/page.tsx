@@ -31,7 +31,13 @@ function MainApp() {
 
   // Search Modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchInitialQuery, setSearchInitialQuery] = useState('');
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+
+  const handleOpenSearch = (query?: string) => {
+    setSearchInitialQuery(query || '');
+    setIsSearchOpen(true);
+  };
 
   // Filters & Sorting
   const [activeCategory, setActiveCategory] = useState<HitCategory>('all');
@@ -47,10 +53,10 @@ function MainApp() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setIsSearchOpen((prev) => !prev);
+        handleOpenSearch('');
       } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
         e.preventDefault();
-        setIsSearchOpen(true);
+        handleOpenSearch('');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -216,7 +222,7 @@ function MainApp() {
         onLaunchStage={() => {
           if (displayHits.length > 0) setFullscreenIndex(0);
         }}
-        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenSearch={handleOpenSearch}
         hitsCount={displayHits.length}
       />
 
@@ -351,6 +357,7 @@ function MainApp() {
       <CardSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        initialQuery={searchInitialQuery}
         language={language}
         onSelectLanguage={(newLang) => {
           setLanguage(newLang);

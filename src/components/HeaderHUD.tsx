@@ -13,7 +13,7 @@ interface HeaderHUDProps {
   activeSort: SortOption;
   onSelectSort: (sort: SortOption) => void;
   onLaunchStage: () => void;
-  onOpenSearch: () => void;
+  onOpenSearch: (query?: string) => void;
   hitsCount: number;
 }
 
@@ -63,13 +63,13 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Search Pill Button */}
             <button
-              onClick={onOpenSearch}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/10 hover:border-amber-400/40 text-slate-400 hover:text-white transition-all text-xs group"
-              title="Search cards across all displays (Cmd+K)"
+              onClick={() => onOpenSearch()}
+              className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/10 hover:border-amber-400/40 text-slate-400 hover:text-white transition-all text-xs group"
+              title="Search Pokémon cards across all displays (Cmd+K)"
             >
-              <Search className="w-3.5 h-3.5 text-amber-400/90 group-hover:text-amber-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden md:inline text-slate-300 font-medium">Search Pokémon...</span>
-              <span className="hidden lg:inline text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-slate-400 font-mono">
+              <Search className="w-3.5 h-3.5 text-amber-400/90 group-hover:text-amber-400 group-hover:scale-110 transition-transform flex-shrink-0" />
+              <span className="text-slate-300 font-medium truncate max-w-[130px] sm:max-w-none">Search Pokémon...</span>
+              <span className="hidden md:inline text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-slate-400 font-mono">
                 ⌘K
               </span>
             </button>
