@@ -1,6 +1,6 @@
 import { Language, PokemonSetSummary, PokemonCardRaw, HitCard } from './types';
 import { RARITY_WEIGHTS } from './constants';
-import { getLocalizedSetName, EMPTY_OR_UNRELEASED_SETS } from './setNames';
+import { getLocalizedSetName, EMPTY_OR_UNRELEASED_SETS, isPocketSet } from './setNames';
 
 const API_BASE = 'https://api.tcgdex.net/v2';
 const setsCache = new Map<string, PokemonSetSummary[]>();
@@ -21,10 +21,14 @@ export async function fetchSets(lang: Language): Promise<PokemonSetSummary[]> {
     }
     const data: PokemonSetSummary[] = await res.json();
     
-    // Filter out unreleased/empty datamined sets (0 card artworks) and localize set names
+    // Filter out:
+    // 1. Mobile Pokémon TCG Pocket sets (A1, A2, tcgp, etc.)
+    // 2. Unreleased/empty datamined sets (0 card artworks)
+    // And localize set names
     const filtered = (Array.isArray(data) ? data : [])
       .filter((s) => {
         if (!s?.id) return false;
+        if (isPocketSet(s.id, s.name, s.logo)) return false;
         const lowerId = s.id.toLowerCase();
         if (EMPTY_OR_UNRELEASED_SETS.has(lowerId)) return false;
         if (s.cardCount && s.cardCount.total === 0) return false;
@@ -230,31 +234,45 @@ export async function searchCardsByName(
       }
     });
 
-    const results: SearchResultCard[] = data.map((card) => {
-      // Extract setId from card id (e.g. 'swsh10.5-049' -> 'swsh10.5', 'sv08-238' -> 'sv08')
-      const lastDash = card.id.lastIndexOf('-');
-      const rawSetId = lastDash !== -1 ? card.id.substring(0, lastDash) : card.id;
-      const rawLower = rawSetId.toLowerCase();
-      const rawNorm = rawLower.replace(/0(?=\d)/g, '');
+    const results: SearchResultCard[] = data
+      .filter((card) => {
+        if (!card?.id) return false;
+        // Exclude pocket card IDs (e.g. A1-001, A2-010, P-A-001, B1-005)
+        if (/^(a\d|b\d|p-[ab])/i.test(card.id)) return false;
+        // Exclude pocket image URLs
+        if (card.image && card.image.includes('/tcgp/')) return false;
+        return true;
+      })
+      .map((card) => {
+        // Extract setId from card id (e.g. 'swsh10.5-049' -> 'swsh10.5', 'sv08-238' -> 'sv08')
+        const lastDash = card.id.lastIndexOf('-');
+        const rawSetId = lastDash !== -1 ? card.id.substring(0, lastDash) : card.id;
+        const rawLower = rawSetId.toLowerCase();
+        const rawNorm = rawLower.replace(/0(?=\d)/g, '');
 
-      const foundSet = setMap.get(rawLower) || setMap.get(rawNorm);
-      const matchedSetId = foundSet?.id || rawSetId;
+        const foundSet = setMap.get(rawLower) || setMap.get(rawNorm);
+        const matchedSetId = foundSet?.id || rawSetId;
 
-      let highResImage = card.image;
-      if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
-        highResImage = `${highResImage}/high.webp`;
-      }
+        let highResImage = card.image;
+        if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
+          highResImage = `${highResImage}/high.webp`;
+        }
 
-      return {
-        id: card.id,
-        localId: card.localId,
-        name: card.name,
-        image: highResImage,
-        setId: matchedSetId,
-        setName: getLocalizedSetName(matchedSetId, foundSet?.name || matchedSetId, lang),
-        setLogo: foundSet?.logo,
-      };
-    });
+        return {
+          id: card.id,
+          localId: card.localId,
+          name: card.name,
+          image: highResImage,
+          setId: matchedSetId,
+          setName: getLocalizedSetName(matchedSetId, foundSet?.name || matchedSetId, lang),
+          setLogo: foundSet?.logo,
+        };
+      })
+      .filter((card) => {
+        if (isPocketSet(card.setId, card.setName, card.setLogo)) return false;
+        if (EMPTY_OR_UNRELEASED_SETS.has(card.setId.toLowerCase())) return false;
+        return true;
+      });
 
     searchCache.set(cacheKey, results);
     return results;

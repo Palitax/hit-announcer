@@ -142,6 +142,51 @@ export const EMPTY_OR_UNRELEASED_SETS = new Set([
 ]);
 
 /**
+ * Checks whether a set or card belongs to the mobile game Pokémon TCG Pocket (tcgp).
+ * Returns true if it is a Pocket set/card, so it can be excluded in favor of official physical TCG sets.
+ */
+export function isPocketSet(setId?: string, setName?: string, setLogo?: string): boolean {
+  if (!setId && !setName && !setLogo) return false;
+  const id = (setId || '').toLowerCase().trim();
+  const name = (setName || '').toLowerCase().trim();
+  const logo = (setLogo || '').toLowerCase().trim();
+
+  // TCGdex series URL path for pocket
+  if (logo.includes('/tcgp/')) return true;
+
+  // Pocket set ID format (A1, A1a, A2, A2a, A2b, A3, A3a, A3b, A4, A4a, B1, B1a, B2, B2a, P-A, P-B)
+  if (/^(a\d[a-z]?|b\d[a-z]?|p-[ab])$/i.test(id)) return true;
+
+  // Pocket set names in English and German
+  if (
+    name.includes('pocket') ||
+    name.includes('genetic apex') ||
+    name.includes('unschlagbare gene') ||
+    name.includes('mythical island') ||
+    name.includes('fabelhafte insel') ||
+    name.includes('space-time smackdown') ||
+    name.includes('raum-zeit-kollision') ||
+    name.includes('triumphant light') ||
+    name.includes('triumphierendes licht') ||
+    name.includes('shining revelry') ||
+    name.includes('strahlendes fest') ||
+    name.includes('celestial guardians') ||
+    name.includes('extradimensional crisis') ||
+    name.includes('eevee grove') ||
+    name.includes('wisdom of sea and sky') ||
+    name.includes('secluded springs') ||
+    name.includes('mega rising') ||
+    name.includes('crimson blaze') ||
+    name.includes('fantastical parade') ||
+    name.includes('paldean wonders')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Returns localized set name.
  * If language is ja, ko, zh-tw, or de, returns German / Western translated name so user can read it.
  * If language is en, returns English name.
