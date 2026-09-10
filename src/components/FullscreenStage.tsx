@@ -4,10 +4,11 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { HitCard, Language } from '@/lib/types';
 import { HoloCard } from './HoloCard';
 import { RarityBadge } from './RarityBadge';
-import { ChevronLeft, ChevronRight, X, Sparkles, Maximize2, Minimize2, ChevronDown, ZoomIn, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Sparkles, Maximize2, Minimize2, ChevronDown, ZoomIn, RotateCcw, Languages } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { fetchCardDetail } from '@/lib/tcgdex';
 import { getUiText } from '@/lib/setNames';
+import { getCardTranslations, formatCardSetNumber } from '@/lib/pokemonNames';
 
 interface FullscreenStageProps {
   cards: HitCard[];
@@ -15,6 +16,8 @@ interface FullscreenStageProps {
   onClose: () => void;
   onNavigate: (index: number) => void;
   setName?: string;
+  setId?: string;
+  officialCount?: number;
   language: Language;
 }
 
@@ -24,12 +27,17 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
   onClose,
   onNavigate,
   setName,
+  setId,
+  officialCount,
   language,
 }) => {
   const currentCard = cards[currentIndex];
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [detail, setDetail] = useState<any>(null);
   const [dragOffsetY, setDragOffsetY] = useState(0);
+
+  // Translation cycle: 0 = Original, 1 = German, 2 = English
+  const [nameLangIndex, setNameLangIndex] = useState<number>(0);
 
   // Zoom & Pan state for 2-finger tablet pinch-to-zoom
   const [zoomScale, setZoomScale] = useState(1);
@@ -50,10 +58,11 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
   const ui = getUiText(language);
   const cardId = currentCard?.id;
 
-  // Reset zoom and pan when changing cards
+  // Reset zoom, pan, and translation language when changing cards
   useEffect(() => {
     setZoomScale(1);
     setPanOffset({ x: 0, y: 0 });
+    setNameLangIndex(0);
   }, [currentIndex]);
 
   // Fetch card detail for extra metadata (illustrator, hp, types)
@@ -286,6 +295,27 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
 
   if (!currentCard) return null;
 
+  const isAsianSet = language !== 'de' && language !== 'en';
+  const translations = getCardTranslations(currentCard.name, detail?.dexId);
+
+  const cycleNameLanguage = () => {
+    if (isAsianSet) {
+      setNameLangIndex((prev) => (prev + 1) % 3);
+    }
+  };
+
+  const displayedCardName = !isAsianSet
+    ? currentCard.name
+    : nameLangIndex === 0
+    ? translations.original
+    : nameLangIndex === 1
+    ? translations.de
+    : translations.en;
+
+  const effectiveSetId = setId || (currentCard.id ? currentCard.id.split('-')[0] : '');
+  const effectiveOfficialCount = officialCount || detail?.set?.cardCount?.official;
+  const formattedSetLine = formatCardSetNumber(setName, effectiveSetId, currentCard.localId, effectiveOfficialCount);
+
   const illustrator = detail?.illustrator || currentCard.illustrator;
   const hp = detail?.hp || currentCard.hp;
 
@@ -439,22 +469,62 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
       {/* 3. BOTTOM METADATA STRIP (Hidden in Pure Fullscreen Card-Only View) */}
       {!isFullscreen && (
         <div className="w-full flex flex-col items-center pb-5 sm:pb-7 px-4 z-30 text-center flex-shrink-0 animate-in fade-in duration-200">
-          <RarityBadge card={currentCard} className="mb-2 text-xs py-0.5 px-3" />
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white drop-shadow-md">
-            {currentCard.name}
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap justify-center">
+            <RarityBadge card={currentCard} className="text-xs py-0.5 px-3" />
+            {isAsianSet && (
+              <button
+                onClick={cycleNameLanguage}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-[11px] font-medium text-amber-300 transition-all active:scale-95 cursor-pointer shadow-sm"
+                title="Tippen zum Übersetzen (Original → Deutsch → Englisch)"
+              >
+                <Languages className="w-3 h-3 text-amber-400" />
+                <span>
+                  {nameLangIndex === 0
+                    ? `Original (${language.toUpperCase()})`
+                    : nameLangIndex === 1
+                    ? '🇩🇪 Deutsch'
+                    : '🇬🇧 English'}
+                </span>
+                <span className="text-[10px] text-slate-400 ml-0.5">🔄</span>
+              </button>
+            )}
+          </div>
+
+          {/* Card Name (Tap to toggle translation for Asian sets) */}
+          <h2
+            data-testid="stage-card-name"
+            onClick={isAsianSet ? cycleNameLanguage : undefined}
+            className={`text-xl sm:text-2xl font-bold tracking-tight text-white drop-shadow-md flex items-center justify-center gap-2 select-text ${
+              isAsianSet ? 'cursor-pointer hover:text-amber-300 transition-colors active:scale-98' : ''
+            }`}
+            title={isAsianSet ? 'Tippen zum Übersetzen (Original → Deutsch → Englisch)' : undefined}
+          >
+            <span>{displayedCardName}</span>
+            {isAsianSet && nameLangIndex !== 0 && (
+              <span className="text-xs sm:text-sm font-normal text-slate-400 font-mono">
+                ({translations.original})
+              </span>
+            )}
           </h2>
-          <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-400 mt-1">
-            <span>{ui.cardNum(currentCard.localId)}</span>
+
+          {/* Always show Set Name, Set ID, and Card Number e.g. "Name sv2a 167/165" */}
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-300 mt-1.5">
+            <span
+              data-testid="stage-set-line"
+              className="font-semibold text-amber-300/95 bg-white/10 px-2.5 py-0.5 rounded-md border border-white/10 font-mono tracking-tight shadow-sm"
+            >
+              {formattedSetLine}
+            </span>
             {hp && (
               <>
-                <span>•</span>
+                <span className="text-slate-500">•</span>
                 <span className="text-emerald-400 font-semibold">{hp} HP</span>
               </>
             )}
             {illustrator && (
               <>
-                <span>•</span>
-                <span>Ill: {illustrator}</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-slate-400">Ill: {illustrator}</span>
               </>
             )}
           </div>
@@ -462,6 +532,7 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
           {/* Keyboard / Gesture Helper Hint */}
           <p className="text-[11px] text-slate-500 mt-2.5">
             <span className="hidden sm:inline">Use <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-mono text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-slate-300 font-mono text-[10px]">→</kbd> to switch • </span>
+            {isAsianSet && <span>Tippe auf den Namen zum Übersetzen • </span>}
             <span>{ui.celebrate} 🎉</span>
           </p>
         </div>

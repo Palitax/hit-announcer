@@ -351,6 +351,8 @@ function MainApp() {
           onClose={() => setFullscreenIndex(null)}
           onNavigate={(newIdx) => setFullscreenIndex(newIdx)}
           setName={activeSet?.name || setInfo?.name}
+          setId={activeSetId || activeSet?.id || setInfo?.id}
+          officialCount={setInfo?.cardCount?.official || activeSet?.cardCount?.official}
           language={language}
         />
       )}
