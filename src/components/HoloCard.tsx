@@ -107,10 +107,38 @@ export const HoloCard: React.FC<HoloCardProps> = ({
     <div
       ref={containerRef}
       onClick={onClick}
+      onPointerDown={(e) => {
+        if (isStage) {
+          isHovered.current = true;
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {}
+        }
+      }}
       onPointerMove={handlePointerMove}
+      onPointerUp={(e) => {
+        if (isStage) {
+          try {
+            if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }
+          } catch {}
+          handlePointerLeave();
+        }
+      }}
+      onPointerCancel={(e) => {
+        if (isStage) {
+          try {
+            if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }
+          } catch {}
+          handlePointerLeave();
+        }
+      }}
       onPointerLeave={handlePointerLeave}
       className={`card-perspective-container select-none ${
-        isStage ? 'w-[300px] sm:w-[380px] md:w-[440px]' : 'w-full'
+        isStage ? 'w-[300px] sm:w-[380px] md:w-[440px] touch-none' : 'w-full'
       }`}
     >
       <div
@@ -131,7 +159,15 @@ export const HoloCard: React.FC<HoloCardProps> = ({
               alt={card.name || 'Pokemon Card'}
               loading={priority || isStage ? 'eager' : 'lazy'}
               decoding="async"
-              onError={() => setImgError(true)}
+              onError={() => {
+                // Try fallback from high to low if available
+                if (cardImg.includes('/high.webp')) {
+                  card.image = cardImg.replace('/high.webp', '/low.webp');
+                  setImgError(false);
+                } else {
+                  setImgError(true);
+                }
+              }}
               className="w-full h-full object-cover select-none pointer-events-none relative z-10"
             />
           </div>

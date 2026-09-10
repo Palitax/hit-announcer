@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { PokemonSetSummary } from '@/lib/types';
-import { ChevronLeft, ChevronRight, Layers, Search, Sparkles } from 'lucide-react';
+import { PokemonSetSummary, Language } from '@/lib/types';
+import { ChevronLeft, ChevronRight, Layers, Search, Sparkles, Box } from 'lucide-react';
+import { getUiText } from '@/lib/setNames';
 
 interface SetCarouselProps {
   sets: PokemonSetSummary[];
   activeSetId: string;
   onSelectSet: (setId: string) => void;
   isLoading?: boolean;
+  language?: Language;
 }
 
 export const SetCarousel: React.FC<SetCarouselProps> = ({
@@ -16,10 +18,13 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
   activeSetId,
   onSelectSet,
   isLoading = false,
+  language = 'en',
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [brokenLogos, setBrokenLogos] = useState<Record<string, boolean>>({});
+
+  const ui = getUiText(language);
 
   const filteredSets = (sets || []).filter((s) => {
     if (!s) return false;
@@ -44,7 +49,9 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
       <div className="flex items-center justify-between gap-3 px-4 sm:px-8 mb-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-slate-400 font-medium">
           <Layers className="w-4 h-4 text-amber-400" />
-          <span>Booster Displays ({filteredSets.length})</span>
+          <span>
+            {ui.boosterDisplays} ({filteredSets.length})
+          </span>
         </div>
 
         {/* Quick Search */}
@@ -54,7 +61,7 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search sets..."
+            placeholder={ui.searchSets}
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full bg-slate-900/90 border border-white/10 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400/50 transition-colors"
           />
         </div>
@@ -85,7 +92,7 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
             ))
           ) : filteredSets.length === 0 ? (
             <div className="w-full py-6 text-center text-sm text-slate-500">
-              No displays match &ldquo;{searchQuery}&rdquo;
+              {ui.noCardsFound(searchQuery)}
             </div>
           ) : (
             filteredSets.map((s) => {
@@ -106,11 +113,11 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
                   {isActive && (
                     <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-amber-400 font-bold tracking-wider uppercase">
                       <Sparkles className="w-2.5 h-2.5 animate-pulse" />
-                      <span>Active</span>
+                      <span>{ui.active}</span>
                     </div>
                   )}
 
-                  {/* Logo or Title */}
+                  {/* Logo or Stylized Display Badge */}
                   <div className="h-10 relative flex items-center justify-start mb-2">
                     {hasLogo ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
@@ -121,19 +128,22 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
                         className="max-h-9 max-w-full object-contain object-left pointer-events-none"
                       />
                     ) : (
-                      <span className="text-xs font-semibold text-slate-300 line-clamp-2">
-                        {s?.name || s?.id}
-                      </span>
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-300">
+                        <Box className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        <span className="text-[11px] font-bold truncate">
+                          {s?.id?.toUpperCase()}
+                        </span>
+                      </div>
                     )}
                   </div>
 
                   {/* Set Details */}
                   <div className="mt-auto">
-                    <p className={`text-xs font-medium truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                    <p className={`text-xs font-semibold truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>
                       {s.name}
                     </p>
                     <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
-                      <span>{s.cardCount?.total || s.cardCount?.official || 0} cards</span>
+                      <span>{s.cardCount?.total || s.cardCount?.official || 0} {ui.cards}</span>
                       {s.releaseDate && <span>{s.releaseDate.slice(0, 4)}</span>}
                     </div>
                   </div>

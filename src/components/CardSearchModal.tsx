@@ -5,6 +5,7 @@ import { Language, PokemonSetSummary } from '@/lib/types';
 import { searchCardsByName, SearchResultCard } from '@/lib/tcgdex';
 import { LANGUAGES } from '@/lib/constants';
 import { Search, X, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { getUiText } from '@/lib/setNames';
 
 interface CardSearchModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const ui = getUiText(language);
 
   // Execute Search immediately
   const executeSearch = useCallback((searchTerm: string) => {
@@ -138,7 +141,7 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
             type="text"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
-            placeholder={`Search Pokémon (e.g. ${popularChips.slice(0, 2).join(', ')})...`}
+            placeholder={`${ui.searchPokemon} (z.B. ${popularChips.slice(0, 2).join(', ')})...`}
             className="flex-1 bg-transparent text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none min-w-0"
           />
 
@@ -165,7 +168,7 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
             type="submit"
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold shadow-md shadow-amber-400/20 active:scale-95 transition-all flex-shrink-0"
           >
-            <span>Search</span>
+            <span>{ui.search}</span>
             <span className="hidden sm:inline text-[10px] opacity-75 font-mono">↵</span>
           </button>
 
@@ -181,7 +184,7 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
         {/* Language Tabs Strip */}
         {onSelectLanguage && (
           <div className="px-4 py-2 border-b border-white/5 bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] text-slate-500 font-medium mr-1 flex-shrink-0">Language:</span>
+            <span className="text-[11px] text-slate-500 font-medium mr-1 flex-shrink-0">{ui.languageLabel}</span>
             {LANGUAGES.map((lang) => {
               const isSelected = lang.code === language;
               return (
@@ -207,9 +210,9 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
           {query.trim() && !isSearching && results.length === 0 && (
             <div className="py-16 text-center text-slate-500">
               <Sparkles className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-              <p className="text-sm font-medium text-slate-400">No cards found matching &ldquo;{query}&rdquo;</p>
+              <p className="text-sm font-medium text-slate-400">{ui.noCardsFound(query)}</p>
               <p className="text-xs text-slate-600 mt-1">
-                Try searching for the {currentLangObj.name} name or switch language above
+                {ui.searchHintLanguage(currentLangObj.name)}
               </p>
             </div>
           )}
@@ -217,7 +220,7 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
           {!query.trim() && (
             <div className="py-10 px-4 text-center text-slate-500">
               <p className="text-sm text-slate-400">
-                Type any Pokémon name to find all its card printings across displays
+                {ui.searchHelperText}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-md mx-auto">
                 {popularChips.map((name) => (
@@ -278,7 +281,7 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
 
               {/* Jump Action Button */}
               <div className="flex items-center gap-1.5 text-xs text-slate-400 group-hover:text-amber-400 font-semibold px-3 py-1.5 rounded-full bg-white/5 group-hover:bg-amber-400/10 border border-white/5 group-hover:border-amber-400/30 transition-all flex-shrink-0">
-                <span className="hidden sm:inline">Jump to Display</span>
+                <span className="hidden sm:inline">{ui.jumpToDisplay}</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </button>
@@ -288,8 +291,8 @@ export const CardSearchModal: React.FC<CardSearchModalProps> = ({
         {/* Footer info */}
         {results.length > 0 && (
           <div className="px-5 py-2.5 bg-slate-950/90 border-t border-white/5 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>{results.length} cards found</span>
-            <span>Click any card to jump directly to its display</span>
+            <span>{ui.cardsFound(results.length)}</span>
+            <span>{ui.clickToJump}</span>
           </div>
         )}
       </div>

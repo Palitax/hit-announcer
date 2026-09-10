@@ -4,6 +4,7 @@ import React from 'react';
 import { Language, HitCategory, SortOption } from '@/lib/types';
 import { LANGUAGES } from '@/lib/constants';
 import { Sparkles, ArrowUpDown, Filter, Play, Search } from 'lucide-react';
+import { getUiText } from '@/lib/setNames';
 
 interface HeaderHUDProps {
   currentLanguage: Language;
@@ -28,12 +29,14 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   onOpenSearch,
   hitsCount,
 }) => {
+  const ui = getUiText(currentLanguage);
+
   const categories: { id: HitCategory; label: string }[] = [
-    { id: 'all', label: 'All Hits' },
-    { id: 'sir-sar', label: 'SAR / SIR' },
-    { id: 'ir-ar', label: 'AR / IR' },
-    { id: 'gold', label: 'Gold UR' },
-    { id: 'ultra', label: 'Ultra Rare' },
+    { id: 'all', label: ui.allHits },
+    { id: 'sir-sar', label: ui.sirSar },
+    { id: 'ir-ar', label: ui.irAr },
+    { id: 'gold', label: ui.goldUr },
+    { id: 'ultra', label: ui.ultraRare },
   ];
 
   return (
@@ -68,7 +71,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
               title="Search Pokémon cards across all displays (Cmd+K)"
             >
               <Search className="w-3.5 h-3.5 text-amber-400/90 group-hover:text-amber-400 group-hover:scale-110 transition-transform flex-shrink-0" />
-              <span className="text-slate-300 font-medium truncate max-w-[130px] sm:max-w-none">Search Pokémon...</span>
+              <span className="text-slate-300 font-medium truncate max-w-[130px] sm:max-w-none">{ui.searchPokemon}</span>
               <span className="hidden md:inline text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-slate-400 font-mono">
                 ⌘K
               </span>
@@ -104,7 +107,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 text-xs font-bold shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all"
             >
               <Play className="w-3 h-3 fill-slate-950" />
-              <span className="hidden sm:inline">Stage View</span>
+              <span className="hidden sm:inline">{ui.stageView}</span>
             </button>
           )}
         </div>
@@ -140,10 +143,10 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
               onChange={(e) => onSelectSort(e.target.value as SortOption)}
               className="bg-slate-900 border border-white/10 text-slate-300 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-amber-400/50 cursor-pointer"
             >
-              <option value="hits">Biggest Hits First</option>
-              <option value="number-asc">Card # (Low to High)</option>
-              <option value="number-desc">Card # (High to Low)</option>
-              <option value="name">Name (A-Z)</option>
+              <option value="hits">{ui.sortByHits}</option>
+              <option value="number-asc">{ui.sortByNumberAsc}</option>
+              <option value="number-desc">{ui.sortByNumberDesc}</option>
+              <option value="name">{ui.sortByName}</option>
             </select>
           </div>
         </div>

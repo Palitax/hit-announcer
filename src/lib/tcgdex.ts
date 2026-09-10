@@ -1,5 +1,6 @@
 import { Language, PokemonSetSummary, PokemonCardRaw, HitCard } from './types';
 import { RARITY_WEIGHTS } from './constants';
+import { getLocalizedSetName, EMPTY_OR_UNRELEASED_SETS } from './setNames';
 
 const API_BASE = 'https://api.tcgdex.net/v2';
 const setsCache = new Map<string, PokemonSetSummary[]>();
@@ -20,8 +21,22 @@ export async function fetchSets(lang: Language): Promise<PokemonSetSummary[]> {
     }
     const data: PokemonSetSummary[] = await res.json();
     
+    // Filter out unreleased/empty datamined sets (0 card artworks) and localize set names
+    const filtered = (Array.isArray(data) ? data : [])
+      .filter((s) => {
+        if (!s?.id) return false;
+        const lowerId = s.id.toLowerCase();
+        if (EMPTY_OR_UNRELEASED_SETS.has(lowerId)) return false;
+        if (s.cardCount && s.cardCount.total === 0) return false;
+        return true;
+      })
+      .map((s) => ({
+        ...s,
+        name: getLocalizedSetName(s.id, s.name, lang),
+      }));
+
     // Sort sets in reverse chronological order (most modern / recent displays first)
-    const sorted = [...data].reverse();
+    const sorted = [...filtered].reverse();
     setsCache.set(cacheKey, sorted);
     return sorted;
   } catch (err) {
@@ -55,6 +70,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
       throw new Error(`Failed to fetch set detail for ${setId}: ${res.statusText}`);
     }
     const setData: SetDetailResponse = await res.json();
+    setData.name = getLocalizedSetName(setData.id, setData.name, lang);
     const official = setData.cardCount?.official || 0;
     const total = setData.cardCount?.total || official;
     const secretTotal = Math.max(total - official, 1);
@@ -110,7 +126,9 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
 
         // Format high resolution image URL
         let highResImage = card.image;
-        if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
+        if (!highResImage && (lang === 'ko' || lang === 'zh-tw')) {
+          highResImage = `https://assets.tcgdex.net/ja/SV/${setId}/${card.localId}/high.webp`;
+        } else if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
           highResImage = `${highResImage}/high.webp`;
         }
 
@@ -233,7 +251,7 @@ export async function searchCardsByName(
         name: card.name,
         image: highResImage,
         setId: matchedSetId,
-        setName: foundSet?.name || matchedSetId,
+        setName: getLocalizedSetName(matchedSetId, foundSet?.name || matchedSetId, lang),
         setLogo: foundSet?.logo,
       };
     });

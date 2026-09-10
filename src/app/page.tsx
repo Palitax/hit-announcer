@@ -11,6 +11,7 @@ import { RarityBadge } from '@/components/RarityBadge';
 import { FullscreenStage } from '@/components/FullscreenStage';
 import { CardSearchModal } from '@/components/CardSearchModal';
 import { Sparkles, Image as ImageIcon, ChevronDown } from 'lucide-react';
+import { getUiText } from '@/lib/setNames';
 
 function MainApp() {
   const searchParams = useSearchParams();
@@ -33,6 +34,8 @@ function MainApp() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchInitialQuery, setSearchInitialQuery] = useState('');
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
+
+  const ui = getUiText(language);
 
   const handleOpenSearch = (query?: string) => {
     setSearchInitialQuery(query || '');
@@ -62,7 +65,6 @@ function MainApp() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
 
   // 1. Load sets when language changes
   useEffect(() => {
@@ -226,7 +228,6 @@ function MainApp() {
         hitsCount={displayHits.length}
       />
 
-
       {/* Booster Display Carousel (Quick Swipe / Scroll) */}
       <section className="w-full border-b border-white/5 bg-slate-950/40 backdrop-blur-md">
         <SetCarousel
@@ -237,6 +238,7 @@ function MainApp() {
             setFullscreenIndex(null);
           }}
           isLoading={isLoadingSets}
+          language={language}
         />
       </section>
 
@@ -256,7 +258,7 @@ function MainApp() {
           )}
           <div>
             <h2 className="text-base sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
-              <span>{activeSet?.name || setInfo?.name || 'Selected Display'}</span>
+              <span>{activeSet?.name || setInfo?.name || ui.selectedDisplay}</span>
               <span className="text-[11px] sm:text-xs uppercase px-2 py-0.5 rounded-full bg-white/10 text-slate-400 font-mono">
                 {activeSetId}
               </span>
@@ -264,17 +266,17 @@ function MainApp() {
             <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-400 mt-0.5">
               <span className="flex items-center gap-1 text-amber-400 font-medium">
                 <Sparkles className="w-3.5 h-3.5" />
-                {displayHits.length} Hits Showing
+                {displayHits.length} {ui.hitsShowing}
               </span>
               <span>•</span>
-              <span>Total Display: {setInfo?.cardCount?.total || activeSet?.cardCount?.total || '—'}</span>
+              <span>{ui.totalDisplay}: {setInfo?.cardCount?.total || activeSet?.cardCount?.total || '—'}</span>
             </div>
           </div>
         </div>
 
         {/* Quick Hint */}
         <div className="text-[11px] text-slate-500 hidden md:block">
-          Tap any card to enter 3D Fullscreen Hit Stage
+          {ui.tapHint}
         </div>
       </section>
 
@@ -292,8 +294,8 @@ function MainApp() {
         ) : displayHits.length === 0 ? (
           <div className="w-full py-20 flex flex-col items-center justify-center text-center text-slate-500">
             <ImageIcon className="w-12 h-12 text-slate-700 mb-3" />
-            <p className="text-base font-semibold text-slate-400">No hits found for this category</p>
-            <p className="text-xs text-slate-600 mt-1">Try selecting &ldquo;All Hits&rdquo; or another display from the carousel above.</p>
+            <p className="text-base font-semibold text-slate-400">{ui.noHitsFound}</p>
+            <p className="text-xs text-slate-600 mt-1">{ui.tryAllHits}</p>
           </div>
         ) : (
           <>
@@ -332,7 +334,7 @@ function MainApp() {
                   onClick={() => setVisibleLimit((prev) => prev + 36)}
                   className="flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/15 text-slate-300 hover:text-white text-xs font-medium transition-all shadow-lg active:scale-95"
                 >
-                  <span>Show More Hits ({displayHits.length - visibleLimit} remaining)</span>
+                  <span>{ui.showMoreHits} ({displayHits.length - visibleLimit} {ui.remaining})</span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
               </div>
