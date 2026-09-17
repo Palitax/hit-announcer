@@ -37,6 +37,14 @@ export const RARITY_WEIGHTS: Record<string, { tier: 'gold' | 'sar' | 'sir' | 'ar
   'Rare Holo VSTAR': { tier: 'ultra', label: 'Holo VSTAR', color: 'from-indigo-400 to-sky-500 text-white', score: 60 },
   'ACE SPEC Rare': { tier: 'ultra', label: 'ACE SPEC', color: 'from-rose-500 to-pink-600 text-white', score: 58 },
 
+  // 30th Anniversary & Mega Era Specials
+  'FUR': { tier: 'gold', label: 'Futuristic Rare (FUR)', color: 'from-violet-500 via-fuchsia-500 to-amber-300 text-white', score: 98 },
+  'Futuristic rare': { tier: 'gold', label: 'Futuristic Rare (FUR)', color: 'from-violet-500 via-fuchsia-500 to-amber-300 text-white', score: 98 },
+  'Classic Collection': { tier: 'gold', label: 'Classic Collection', color: 'from-amber-500 via-yellow-400 to-amber-600 text-amber-950', score: 92 },
+  'Pikachu Rare': { tier: 'ar', label: 'Pikachu Rare', color: 'from-yellow-400 to-amber-400 text-amber-950', score: 80 },
+  'MUR': { tier: 'gold', label: 'Mega Ultra Rare (Gold)', color: 'from-amber-400 to-yellow-500 text-amber-950', score: 100 },
+  'MA': { tier: 'sar', label: 'Mega Art Rare (MA)', color: 'from-fuchsia-500 via-purple-500 to-pink-500 text-white', score: 90 },
+
   // Holos
   'Rare Holo': { tier: 'holo', label: 'Holo Rare', color: 'from-slate-600 to-slate-700 text-white', score: 30 },
 };

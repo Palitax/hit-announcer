@@ -78,7 +78,7 @@ function MainApp() {
       setIsLoadingSets(false);
 
       if (validSets.length > 0) {
-        const preferredIds = ['sv08', 'sv8', 'sv7', 'sv07', 'sv6', 'sv06', 'sv5k', 'sv4a', 'sv035', 's12a'];
+        const preferredIds = ['30th', 'm6a', '30th-c', 'sv08', 'sv8', 'sv7', 'sv07', 'sv6', 'sv06', 'sv5k', 'sv4a', 'sv035', 's12a'];
         const matched = validSets.find((s) =>
           preferredIds.some((p) => p.toLowerCase() === (s?.id || '').toLowerCase())
         );
@@ -357,7 +357,7 @@ function MainApp() {
         />
       )}
 
-      {/* Global Pokémon Search Modal */}
+      {/* Global Pokémon & Display Search Modal */}
       <CardSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
@@ -369,6 +369,11 @@ function MainApp() {
         }}
         sets={sets}
         onSelectCard={handleSelectCardFromSearch}
+        onSelectSet={(targetSetId) => {
+          setActiveSetId(targetSetId);
+          setActiveCategory('all');
+          setFullscreenIndex(null);
+        }}
       />
     </main>
   );

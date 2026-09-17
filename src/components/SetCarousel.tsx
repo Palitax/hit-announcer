@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { PokemonSetSummary, Language } from '@/lib/types';
 import { ChevronLeft, ChevronRight, Layers, Search, Sparkles, Box } from 'lucide-react';
-import { getUiText } from '@/lib/setNames';
+import { getUiText, matchSetByQuery } from '@/lib/setNames';
 
 interface SetCarouselProps {
   sets: PokemonSetSummary[];
@@ -28,10 +28,7 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
 
   const filteredSets = (sets || []).filter((s) => {
     if (!s) return false;
-    const name = (s.name || '').toLowerCase();
-    const id = (s.id || '').toLowerCase();
-    const q = searchQuery.toLowerCase();
-    return name.includes(q) || id.includes(q);
+    return matchSetByQuery(s.id, s.name, searchQuery);
   });
 
   const scroll = (direction: 'left' | 'right') => {

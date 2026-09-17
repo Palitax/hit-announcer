@@ -2,7 +2,30 @@ import { Language } from './types';
 
 // Western/German display names for Asian (JA, KO, ZH) and special sets
 const ASIAN_SET_NAMES: Record<string, string> = {
+  // 30th Anniversary Series
+  '30th': '30th Celebration (30 Jahre Jubiläum)',
+  '30th-c': '30th Classic Collection (30 Jahre Klassik)',
+  'M6a': '30th Celebration (30周年記念)',
+  'm6a': '30th Celebration (30周年記念)',
+
+  // Mega (M) Series
+  'M6': 'Storm Emeralda (M6)',
+  'M5': 'Abyss Eye (M5)',
+  'M4': 'Ninja Spinner (M4)',
+  'M3': 'Munikis Zero (M3)',
+  'M2a': 'MEGA Dream ex (M2a)',
+  'M2': 'Inferno X (M2)',
+  'M1L': 'Mega Brave (M1L)',
+  'M1S': 'Mega Symphonia (M1S)',
+  'MC': 'Start Deck 100 Battle Collection',
+  'M-P': 'Mega Promokarten (M-P)',
+
   // Scarlet & Violet (SV) Series
+  'SV11B': 'Black Bolt (SV11B)',
+  'SV11W': 'White Flare (SV11W)',
+  'SV10': 'Glory of Team Rocket (SV10)',
+  'SV9a': 'Hot Air Arena (SV9a)',
+  'SV9': 'Battle Partners (SV9)',
   'SV8a': 'Terastal Festival (Prismatische Entwicklungen)',
   'SV8': 'Supercharged Breaker (Stürmische Funken)',
   'SV7a': 'Paradise Dragona (Paradies-Drachen)',
@@ -124,21 +147,7 @@ export const EMPTY_OR_UNRELEASED_SETS = new Set([
   'b1a',
   'b2',
   'a4a',
-  'mee',
-  'mep',
   'p-a',
-  'm1l',
-  'm2a',
-  'm3',
-  'm6',
-  'm5',
-  'mc',
-  'm-p',
-  'm2',
-  'm1s',
-  'm4',
-  'sv10.5b',
-  'sv10.5w',
 ]);
 
 /**
@@ -214,6 +223,51 @@ export function getLocalizedSetName(
   return rawName || setId;
 }
 
+// Keywords & Aliases to make search intuitive across German, English, Japanese, and set codes
+export const SET_SEARCH_ALIASES: Record<string, string[]> = {
+  '30th': ['30', '30th', '30 jahre', '30周年', '30th anniversary', 'm6a', 'celebration', 'jubiläum', 'pikachu', 'mew', 'futuristic'],
+  '30th-c': ['30', '30th', '30 jahre', '30周年', '30th classic', 'classic', 'klassik', 'sammlung', 'charizard', 'glurak'],
+  'm6a': ['30', '30th', '30 jahre', '30周年', '30th anniversary', 'm6a', 'celebration'],
+  'sv2a': ['151', 'pokemon 151', 'sv2a', 'kanto', 'mew', 'glurak', 'charizard'],
+  's8a': ['25', '25th', '25 jahre', '25th anniversary', 'celebrations', 's8a'],
+  'cp6': ['20', '20th', '20 jahre', '20th anniversary', 'evolution', 'cp6'],
+  's12a': ['vstar universe', 'zenit der könige', 'crown zenith', 's12a'],
+  'sv8a': ['terastal festival', 'prismatic evolutions', 'prismatische entwicklungen', 'eevee', 'eeveelutions', 'sv8a'],
+  's6a': ['eevee heroes', 'drachenwandel', 'evolving skies', 's6a'],
+  'sv8': ['supercharged breaker', 'stürmische funken', 'surging sparks', 'sv8', 'pikachu'],
+  'sv7': ['stellar miracle', 'stellarkrone', 'stellar crown', 'sv7', 'terapagos'],
+  'sv6': ['mask of change', 'maskerade im zwielicht', 'twilight masquerade', 'sv6', 'ogerpon'],
+};
+
+/**
+ * Checks if a set matches a search query by ID, localized name, or alias keywords.
+ */
+export function matchSetByQuery(setId: string, setName: string, query: string): boolean {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const idLower = (setId || '').toLowerCase();
+  const nameLower = (setName || '').toLowerCase();
+
+  if (idLower.includes(q) || nameLower.includes(q)) return true;
+
+  // Direct 30 check
+  if ((q === '30' || q === '30th') && (idLower === '30th' || idLower === '30th-c' || idLower === 'm6a')) {
+    return true;
+  }
+
+  // Check aliases
+  const aliases = SET_SEARCH_ALIASES[idLower];
+  if (aliases) {
+    if (aliases.some((a) => a.toLowerCase().includes(q) || q.includes(a.toLowerCase()))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /**
  * UI Translations based on language.
  * JA, KO, ZH-TW and DE all use German UI, while EN uses English.
@@ -223,7 +277,7 @@ export function getUiText(lang: Language) {
 
   return {
     stageView: isEnglish ? 'Stage View' : 'Bühnenansicht',
-    searchPokemon: isEnglish ? 'Search Pokémon...' : 'Pokémon suchen...',
+    searchPokemon: isEnglish ? 'Search Pokémon or Displays...' : 'Pokémon oder Displays suchen...',
     search: isEnglish ? 'Search' : 'Suchen',
     allHits: isEnglish ? 'All Hits' : 'Alle Hits',
     sirSar: 'SAR / SIR',
@@ -242,6 +296,9 @@ export function getUiText(lang: Language) {
     cards: isEnglish ? 'cards' : 'Karten',
     selectedDisplay: isEnglish ? 'Selected Display' : 'Ausgewähltes Display',
     displayHits: isEnglish ? 'Display Hits' : 'Display Hits',
+    matchingDisplays: isEnglish ? 'Matching Displays' : 'Gefundene Displays',
+    matchingCards: isEnglish ? 'Matching Cards' : 'Gefundene Karten',
+    openDisplay: isEnglish ? 'Open Display' : 'Display öffnen',
     hitOf: (curr: number, total: number) =>
       isEnglish ? `Hit ${curr} of ${total}` : `Hit ${curr} von ${total}`,
     cardNum: (num: string) => (isEnglish ? `Card #${num}` : `Karte #${num}`),
@@ -270,8 +327,8 @@ export function getUiText(lang: Language) {
     noCardsFound: (q: string) =>
       isEnglish ? `No cards found matching "${q}"` : `Keine Karten gefunden für "${q}"`,
     searchHelperText: isEnglish
-      ? 'Type any Pokémon name to find all its card printings across displays'
-      : 'Tippe einen Pokémon-Namen ein, um alle Kartendrucke displayübergreifend zu finden',
+      ? 'Type any Pokémon name or display name to find cards and booster displays'
+      : 'Tippe einen Pokémon-Namen oder Display-Namen ein, um Displays und Karten zu finden',
     searchHintLanguage: (langName: string) =>
       isEnglish
         ? `Try searching for the ${langName} name or switch language above`
