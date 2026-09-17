@@ -2,6 +2,7 @@ import { Language, PokemonSetSummary, PokemonCardRaw, HitCard } from './types';
 import { RARITY_WEIGHTS } from './constants';
 import { getLocalizedSetName, EMPTY_OR_UNRELEASED_SETS, isPocketSet } from './setNames';
 import { translateToJapanese } from './pokemonNames';
+import { JAPANESE_30TH_MAIN_IMAGES, JAPANESE_30TH_CLASSIC_IMAGES } from './japanese30thImages';
 
 const API_BASE = 'https://api.tcgdex.net/v2';
 const setsCache = new Map<string, PokemonSetSummary[]>();
@@ -40,19 +41,6 @@ const CLASSIC_COLLECTION_IMAGES: Record<string, string> = {
   '028': 'https://assets.tcgdex.net/en/swsh/cel25/16/high.webp',
   '029': 'https://assets.tcgdex.net/en/pop/pop5/2/high.webp',
   '030': 'https://assets.tcgdex.net/en/sm/det1/8/high.webp',
-};
-
-const CLASSIC_COLLECTION_IMAGES_JA: Record<string, string> = {
-  '001': 'https://assets.tcgdex.net/ja/SV/SV2a/006/high.webp',
-  '007': 'https://assets.tcgdex.net/ja/SV/SV2a/013/high.webp',
-  '008': 'https://assets.tcgdex.net/ja/SM/SM9/033/high.webp',
-  '013': 'https://assets.tcgdex.net/ja/SM/SM10/001/high.webp',
-  '014': 'https://assets.tcgdex.net/ja/SV/SV2a/025/high.webp',
-  '022': 'https://assets.tcgdex.net/ja/S/S8a/004/high.webp',
-  '026': 'https://assets.tcgdex.net/ja/S/S8b/114/high.webp',
-  '027': 'https://assets.tcgdex.net/ja/S/S12a/123/high.webp',
-  '028': 'https://assets.tcgdex.net/ja/S/S8a/016/high.webp',
-  '030': 'https://assets.tcgdex.net/ja/SV/SV2a/129/high.webp',
 };
 
 export async function fetchSets(lang: Language): Promise<PokemonSetSummary[]> {
@@ -178,8 +166,8 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
 
       // Special handling for 30th Anniversary sets
       if (is30thClassic) {
-        const image = (lang === 'ja' && CLASSIC_COLLECTION_IMAGES_JA[card.localId])
-          ? CLASSIC_COLLECTION_IMAGES_JA[card.localId]
+        const image = (lang === 'ja' && JAPANESE_30TH_CLASSIC_IMAGES[card.localId])
+          ? JAPANESE_30TH_CLASSIC_IMAGES[card.localId]
           : (CLASSIC_COLLECTION_IMAGES[card.localId] || 'https://assets.tcgdex.net/en/base/base1/4/high.webp');
         hits.push({
           ...card,
@@ -195,8 +183,10 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
       }
 
       if (is30thMain) {
-        // High-res image on CDN
-        const highResImage = `https://assets.tcgdex.net/en/me/30th/${card.localId}/high.webp`;
+        // High-res image on CDN (with official Japanese scan priority in Japanese mode)
+        const highResImage = (lang === 'ja' && JAPANESE_30TH_MAIN_IMAGES[card.localId])
+          ? JAPANESE_30TH_MAIN_IMAGES[card.localId]
+          : `https://assets.tcgdex.net/en/me/30th/${card.localId}/high.webp`;
 
         // 1. Pikachu Subset (Cards 025 to 054)
         if (!isNaN(parsedLocalId) && parsedLocalId >= 25 && parsedLocalId <= 54) {
@@ -478,8 +468,14 @@ export async function searchCardsByName(
 
         let highResImage = card.image;
         if (matchedSetId.toLowerCase() === '30th' && card.localId) {
-          highResImage = `https://assets.tcgdex.net/en/me/30th/${card.localId}/high.webp`;
-        } else if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png')) {
+          highResImage = (lang === 'ja' && JAPANESE_30TH_MAIN_IMAGES[card.localId])
+            ? JAPANESE_30TH_MAIN_IMAGES[card.localId]
+            : `https://assets.tcgdex.net/en/me/30th/${card.localId}/high.webp`;
+        } else if (matchedSetId.toLowerCase() === '30th-c' && card.localId) {
+          highResImage = (lang === 'ja' && JAPANESE_30TH_CLASSIC_IMAGES[card.localId])
+            ? JAPANESE_30TH_CLASSIC_IMAGES[card.localId]
+            : (CLASSIC_COLLECTION_IMAGES[card.localId] || `https://assets.tcgdex.net/en/me/30th/${card.localId}/high.webp`);
+        } else if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png') && !highResImage.endsWith('.jpg')) {
           highResImage = `${highResImage}/high.webp`;
         }
 

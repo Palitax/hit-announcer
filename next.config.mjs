@@ -11,6 +11,16 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.pokemontcg.io',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.pokemon-card.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pokemon-card.com',
+        pathname: '/**',
       }
     ],
   },
