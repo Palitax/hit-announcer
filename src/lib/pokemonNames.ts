@@ -8767,6 +8767,73 @@ export function getCardTranslations(
   };
 }
 
+const PKM_BY_LENGTH = [...PKM_DATA].sort((a, b) => b[2].length - a[2].length);
+
+const SPECIAL_NAME_MAP: Record<string, string> = {
+  'Misty': 'カスミ',
+  'Erika': 'エリカ',
+  'N': 'N',
+  'Red': 'レッド',
+  'Blue': 'グリーン',
+  'Oak': 'オーキド博士',
+};
+
+/**
+ * Translates an English or German Pokémon card name into authentic Japanese.
+ * Example: "Mew ex" -> "ミュウex", "Mewtwo ex" -> "ミュウツーex", "Pikachu" -> "ピカチュウ"
+ */
+export function translateToJapanese(rawName: string): string {
+  const original = (rawName || '').trim();
+  if (!original) return '';
+
+  // 1. Check Trainers
+  for (const [jaT, , , deT, enT] of TRAINERS_DATA) {
+    if (original.includes(enT) || original.includes(deT)) {
+      return original.replace(enT, jaT).replace(deT, jaT);
+    }
+  }
+
+  for (const [enName, jaName] of Object.entries(SPECIAL_NAME_MAP)) {
+    if (original.includes(enName)) {
+      return original.replace(enName, jaName);
+    }
+  }
+
+  let result = original;
+
+  // 2. Check Pokémon names from PKM_BY_LENGTH (longer names first so Mewtwo precedes Mew)
+  for (let i = 0; i < PKM_BY_LENGTH.length; i++) {
+    const [, deP, enP, jaP] = PKM_BY_LENGTH[i];
+    const enRegex = new RegExp(`\\b${enP}\\b`, 'i');
+    if (enRegex.test(result)) {
+      result = result.replace(enRegex, jaP);
+      break;
+    }
+    const deRegex = new RegExp(`\\b${deP}\\b`, 'i');
+    if (deRegex.test(result)) {
+      result = result.replace(deRegex, jaP);
+      break;
+    }
+  }
+
+  // 3. Handle prefixes & suffixes
+  result = result
+    .replace(/\bAlolan\s+/i, 'アローラ')
+    .replace(/\bGalarian\s+/i, 'ガラル')
+    .replace(/\bHisuian\s+/i, 'ヒスイ')
+    .replace(/\bPaldean\s+/i, 'パルデア')
+    .replace(/\bRadiant\s+/i, 'かがやく')
+    .replace(/\bShining\s+/i, 'ひかる')
+    .replace(/\bDark\s+/i, 'わるい')
+    .replace(/\s+ex\b/g, 'ex')
+    .replace(/\s+GX\b/g, 'GX')
+    .replace(/\s+VMAX\b/g, 'VMAX')
+    .replace(/\s+VSTAR\b/g, 'VSTAR')
+    .replace(/\s+V\b/g, 'V');
+
+  return result;
+}
+
 /**
  * Format set and card number line
  * Example: "Name sv2a 167/165" or "Stürmische Funken sv08 238/191"

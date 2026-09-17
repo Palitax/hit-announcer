@@ -1,6 +1,7 @@
 import { Language, PokemonSetSummary, PokemonCardRaw, HitCard } from './types';
 import { RARITY_WEIGHTS } from './constants';
 import { getLocalizedSetName, EMPTY_OR_UNRELEASED_SETS, isPocketSet } from './setNames';
+import { translateToJapanese } from './pokemonNames';
 
 const API_BASE = 'https://api.tcgdex.net/v2';
 const setsCache = new Map<string, PokemonSetSummary[]>();
@@ -157,11 +158,17 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
       const weightEntry = RARITY_WEIGHTS[rarity];
       const hasHitKeyword = /\b(V|ex|VMAX|VSTAR|SAR|SIR|AR|UR|CHR|CSR|GX|EX|LV\.X|Prime|Break|ACE SPEC|FUR)\b/i.test(card.name);
 
+      // Card Name localization for Japanese mode
+      const cardDisplayName = (lang === 'ja' && (is30thMain || is30thClassic))
+        ? translateToJapanese(card.name)
+        : card.name;
+
       // Special handling for 30th Anniversary sets
       if (is30thClassic) {
         const image = CLASSIC_COLLECTION_IMAGES[card.localId] || 'https://assets.tcgdex.net/en/base/base1/4/high.webp';
         hits.push({
           ...card,
+          name: cardDisplayName,
           image,
           hitTier: 'gold',
           hitTierLabel: lang === 'ja' ? 'Classic (30周年)' : 'Classic Collection',
@@ -180,6 +187,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
         if (!isNaN(parsedLocalId) && parsedLocalId >= 25 && parsedLocalId <= 54) {
           hits.push({
             ...card,
+            name: cardDisplayName,
             image: highResImage,
             hitTier: 'ar',
             hitTierLabel: lang === 'ja' ? 'Pikachu Rare (30th)' : 'Pikachu Rare',
@@ -194,6 +202,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
         if (parsedLocalId === 157 || parsedLocalId === 158 || /\b(Mew|Mewtwo)\s+ex\b/i.test(card.name)) {
           hits.push({
             ...card,
+            name: cardDisplayName,
             image: highResImage,
             hitTier: 'gold',
             hitTierLabel: lang === 'ja' ? 'FUR (Futuristic Rare)' : 'Futuristic Rare (FUR)',
@@ -208,6 +217,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
         if (parsedLocalId >= 155) {
           hits.push({
             ...card,
+            name: cardDisplayName,
             image: highResImage,
             hitTier: 'gold',
             hitTierLabel: lang === 'ja' ? 'UR (Gold)' : 'Hyper Rare (Gold)',
@@ -222,6 +232,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
         if (parsedLocalId >= 145) {
           hits.push({
             ...card,
+            name: cardDisplayName,
             image: highResImage,
             hitTier: lang === 'ja' ? 'sar' : 'sir',
             hitTierLabel: lang === 'ja' ? 'SAR (Special Art Rare)' : 'Special Illustration Rare',
@@ -236,6 +247,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
         if (parsedLocalId >= 129) {
           hits.push({
             ...card,
+            name: cardDisplayName,
             image: highResImage,
             hitTier: lang === 'ja' ? 'ar' : 'ir',
             hitTierLabel: lang === 'ja' ? 'AR (Art Rare)' : 'Illustration Rare',
@@ -250,6 +262,7 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
         if (/\bex\b/i.test(card.name)) {
           hits.push({
             ...card,
+            name: cardDisplayName,
             image: highResImage,
             hitTier: 'ultra',
             hitTierLabel: lang === 'ja' ? 'Double Rare (ex)' : 'Double Rare (ex)',
@@ -455,10 +468,14 @@ export async function searchCardsByName(
           highResImage = `${highResImage}/high.webp`;
         }
 
+        const displayName = (lang === 'ja' && (matchedSetId.toLowerCase() === '30th' || matchedSetId.toLowerCase() === '30th-c'))
+          ? translateToJapanese(card.name)
+          : card.name;
+
         return {
           id: card.id,
           localId: card.localId,
-          name: card.name,
+          name: displayName,
           image: highResImage,
           setId: matchedSetId,
           setName: getLocalizedSetName(matchedSetId, foundSet?.name || matchedSetId, lang),
