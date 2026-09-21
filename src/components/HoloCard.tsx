@@ -170,6 +170,9 @@ export const HoloCard: React.FC<HoloCardProps> = ({
                 if (cardImg.includes('/high.webp')) {
                   card.image = cardImg.replace('/high.webp', '/low.webp');
                   setImgError(false);
+                } else if (cardImg.includes('_LG.png')) {
+                  card.image = cardImg.replace('_LG.png', '_SM.png');
+                  setImgError(false);
                 } else {
                   setImgError(true);
                 }

@@ -119,7 +119,7 @@ export const SetCarousel: React.FC<SetCarouselProps> = ({
                     {hasLogo ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
-                        src={`${s.logo}.png`}
+                        src={s.logo && (s.logo.endsWith('.png') || s.logo.endsWith('.webp') || s.logo.endsWith('.gif') || s.logo.endsWith('.jpg')) ? s.logo : `${s.logo}.png`}
                         alt={s.name || ''}
                         onError={() => setBrokenLogos((prev) => ({ ...prev, [s.id]: true }))}
                         className="max-h-9 max-w-full object-contain object-left pointer-events-none"

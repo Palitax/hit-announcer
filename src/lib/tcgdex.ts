@@ -3,6 +3,12 @@ import { RARITY_WEIGHTS } from './constants';
 import { getLocalizedSetName, EMPTY_OR_UNRELEASED_SETS, isPocketSet } from './setNames';
 import { translateToJapanese } from './pokemonNames';
 import { JAPANESE_30TH_MAIN_IMAGES, JAPANESE_30TH_CLASSIC_IMAGES } from './japanese30thImages';
+import {
+  isJapaneseMegaSet,
+  getJapaneseMegaCardImage,
+  getJapaneseMegaCardRarity,
+  getJapaneseMegaSetLogo,
+} from './japaneseMegaImages';
 
 const API_BASE = 'https://api.tcgdex.net/v2';
 const setsCache = new Map<string, PokemonSetSummary[]>();
@@ -72,6 +78,8 @@ export async function fetchSets(lang: Language): Promise<PokemonSetSummary[]> {
       .map((s) => ({
         ...s,
         name: getLocalizedSetName(s.id, s.name, lang),
+        logo: s.logo || getJapaneseMegaSetLogo(s.id) || undefined,
+        symbol: s.symbol || getJapaneseMegaSetLogo(s.id) || undefined,
       }));
 
     // Ensure 30th Anniversary sets are included for Japanese and all Asian languages
@@ -143,6 +151,11 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
     }
     const setData: SetDetailResponse = await res.json();
     setData.name = getLocalizedSetName(setData.id, setData.name, lang);
+    const isMega = isJapaneseMegaSet(normalizedSetId);
+    if (isMega) {
+      setData.logo = setData.logo || getJapaneseMegaSetLogo(normalizedSetId) || undefined;
+      setData.symbol = setData.symbol || getJapaneseMegaSetLogo(normalizedSetId) || undefined;
+    }
     const official = setData.cardCount?.official || 0;
     const total = setData.cardCount?.total || official;
     const secretTotal = Math.max(total - official, 1);
@@ -152,6 +165,16 @@ export async function fetchSetHits(lang: Language, setId: string): Promise<{ set
     const is30thClassic = normalizedSetId.toLowerCase() === '30th-c';
 
     for (const card of setData.cards || []) {
+      if (isMega) {
+        const megaImg = getJapaneseMegaCardImage(normalizedSetId, card.localId);
+        const megaRarity = getJapaneseMegaCardRarity(normalizedSetId, card.localId, card.name);
+        if (megaImg) {
+          card.image = megaImg;
+        }
+        if (megaRarity && (!card.rarity || card.rarity === '')) {
+          card.rarity = megaRarity;
+        }
+      }
       const parsedLocalId = parseInt(card.localId, 10);
       const isSecret = !isNaN(parsedLocalId) && official > 0 && parsedLocalId > official;
       const rarity = card.rarity || '';
@@ -475,6 +498,8 @@ export async function searchCardsByName(
           highResImage = (lang === 'ja' && JAPANESE_30TH_CLASSIC_IMAGES[card.localId])
             ? JAPANESE_30TH_CLASSIC_IMAGES[card.localId]
             : (CLASSIC_COLLECTION_IMAGES[card.localId] || `https://assets.tcgdex.net/en/me/30th/${card.localId}/high.webp`);
+        } else if (isJapaneseMegaSet(matchedSetId) && card.localId) {
+          highResImage = getJapaneseMegaCardImage(matchedSetId, card.localId) || highResImage;
         } else if (highResImage && !highResImage.endsWith('.webp') && !highResImage.endsWith('.png') && !highResImage.endsWith('.jpg')) {
           highResImage = `${highResImage}/high.webp`;
         }
@@ -490,7 +515,7 @@ export async function searchCardsByName(
           image: highResImage,
           setId: matchedSetId,
           setName: getLocalizedSetName(matchedSetId, foundSet?.name || matchedSetId, lang),
-          setLogo: foundSet?.logo,
+          setLogo: foundSet?.logo || getJapaneseMegaSetLogo(matchedSetId) || undefined,
         };
       })
       .filter((card) => {

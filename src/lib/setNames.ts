@@ -237,6 +237,13 @@ export const SET_SEARCH_ALIASES: Record<string, string[]> = {
   'sv8': ['supercharged breaker', 'stürmische funken', 'surging sparks', 'sv8', 'pikachu'],
   'sv7': ['stellar miracle', 'stellarkrone', 'stellar crown', 'sv7', 'terapagos'],
   'sv6': ['mask of change', 'maskerade im zwielicht', 'twilight masquerade', 'sv6', 'ogerpon'],
+  'm5': ['abyss eye', 'abyss', 'm5', 'アビスアイ', 'darkrai', 'dunkelheit', 'finsternis'],
+  'm4': ['ninja spinner', 'ninja', 'spinner', 'm4', 'ニンジャスピナー', 'greninja', 'gekkouga', 'quajutsu'],
+  'm1s': ['mega symphonia', 'symphonia', 'm1s', 'メガシンフォニア', 'gardevoir', 'guardevoir'],
+  'm1l': ['mega brave', 'brave', 'm1l', 'メガブレイブ', 'lucario'],
+  'm2': ['inferno x', 'inferno', 'm2', 'インフェルノx', 'charizard', 'glurak'],
+  'm3': ['munikis zero', 'munikis', 'm3', 'ムニキスゼロ'],
+  'm6': ['storm emeralda', 'emeralda', 'm6', 'ストームエメラルダ', 'rayquaza'],
 };
 
 /**
