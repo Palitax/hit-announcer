@@ -426,8 +426,8 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
         {/* Dynamic Ambient Background Glow from card */}
         <div className="absolute w-[420px] sm:w-[650px] h-[420px] sm:h-[650px] rounded-full bg-gradient-to-tr from-amber-500/15 via-purple-600/15 to-cyan-500/15 blur-[130px] pointer-events-none" />
 
-        {/* Previous Card Arrow (Hidden in Fullscreen Card-Only View) */}
-        {!isFullscreen && (
+        {/* Previous Card Arrow */}
+        {cards.length > 1 && (
           <button
             onClick={goToPrev}
             className="absolute left-2 sm:left-6 md:left-10 z-30 p-3 sm:p-4 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white shadow-2xl backdrop-blur-md transition-all hover:scale-110 active:scale-95 group"
@@ -454,8 +454,8 @@ export const FullscreenStage: React.FC<FullscreenStageProps> = ({
           />
         </div>
 
-        {/* Next Card Arrow (Hidden in Fullscreen Card-Only View) */}
-        {!isFullscreen && (
+        {/* Next Card Arrow */}
+        {cards.length > 1 && (
           <button
             onClick={goToNext}
             className="absolute right-2 sm:right-6 md:right-10 z-30 p-3 sm:p-4 rounded-full bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white shadow-2xl backdrop-blur-md transition-all hover:scale-110 active:scale-95 group"
